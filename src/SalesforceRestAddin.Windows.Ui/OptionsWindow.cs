@@ -8,7 +8,7 @@ public sealed class OptionsWindow : Window
 {
     private readonly CheckBox _useReference;
     private readonly CheckBox _noWarning;
-    private readonly CheckBox _confirmLargeQuery;
+    private readonly CheckBox _noConfirmQueryDownload;
     private readonly CheckBox _noQueryLimit;
     private readonly CheckBox _autoAssignRule;
     private readonly CheckBox _includeHiddenCells;
@@ -33,13 +33,13 @@ public sealed class OptionsWindow : Window
         var root = new StackPanel { Margin = new Thickness(16) };
         _useReference = MakeCheck("Use Reference Name/Id", current.UseReference);
         _noWarning = MakeCheck("Do not show warning dialogs before commencing operations.", current.NoWarning);
-        _confirmLargeQuery = MakeCheck("Confirm Large Query Download", current.ConfirmLargeQuery);
+        _noConfirmQueryDownload = MakeCheck("Do not confirm Query Table downloads.", current.NoConfirmQueryDownload);
         _noQueryLimit = MakeCheck("No Query Limit", current.NoQueryLimit);
         _autoAssignRule = MakeCheck("Enable Auto Assign Rule", current.AutoAssignRule);
         _includeHiddenCells = MakeCheck("Include Hidden Columns/Rows", current.IncludeHiddenCells);
         root.Children.Add(_useReference);
         root.Children.Add(_noWarning);
-        root.Children.Add(_confirmLargeQuery);
+        root.Children.Add(_noConfirmQueryDownload);
         root.Children.Add(_noQueryLimit);
         root.Children.Add(_autoAssignRule);
         root.Children.Add(_includeHiddenCells);
@@ -86,7 +86,7 @@ public sealed class OptionsWindow : Window
         {
             UseReference = _useReference.IsChecked == true,
             NoWarning = _noWarning.IsChecked == true,
-            ConfirmLargeQuery = _confirmLargeQuery.IsChecked == true,
+            NoConfirmQueryDownload = _noConfirmQueryDownload.IsChecked == true,
             NoQueryLimit = _noQueryLimit.IsChecked == true,
             AutoAssignRule = _autoAssignRule.IsChecked == true,
             IncludeHiddenCells = _includeHiddenCells.IsChecked == true,

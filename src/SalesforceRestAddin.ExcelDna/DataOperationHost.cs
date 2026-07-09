@@ -80,7 +80,7 @@ public static class DataOperationHost
             Options = options,
         };
 
-        if (options.ConfirmLargeQuery)
+        if (!options.NoConfirmQueryDownload)
         {
             var countResult = ExcelStaAsyncHost.Run(
                 "Counting matches…",
@@ -131,7 +131,7 @@ public static class DataOperationHost
                         {
                             Snapshot = snapshot,
                             Options = options,
-                            ConfirmLargeQuery = options.ConfirmLargeQuery,
+                            ConfirmQueryTableDownload = !options.NoConfirmQueryDownload,
                             Progress = report,
                         },
                         ct);

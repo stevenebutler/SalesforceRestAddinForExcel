@@ -16,8 +16,11 @@ public sealed class ConnectorOptions
     /// <summary>Skip bulk-operation confirmation dialogs (<c>NoWarn</c>).</summary>
     public bool NoWarning { get; init; }
 
-    /// <summary>Confirm large query-table downloads with a COUNT check.</summary>
-    public bool ConfirmLargeQuery { get; init; }
+    /// <summary>
+    /// When true, skip the Query Table Data COUNT + download confirmation.
+    /// Default false — new users are prompted. Persisted as <c>noConfirmQueryDownload</c>.
+    /// </summary>
+    public bool NoConfirmQueryDownload { get; init; }
 
     /// <summary>Disable row/column selection limits on query/delete (<c>NoLimit</c>).</summary>
     public bool NoQueryLimit { get; init; }

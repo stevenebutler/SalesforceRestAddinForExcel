@@ -48,7 +48,7 @@ public sealed class JsonConnectorOptionsStore : IConnectorOptionsStore
             {
                 UseReference = GetBoolOrDefault(root, "useReference"),
                 NoWarning = GetBoolOrDefault(root, "noWarning"),
-                ConfirmLargeQuery = GetBoolOrDefault(root, "confirmLargeQuery"),
+                NoConfirmQueryDownload = GetBoolOrDefault(root, "noConfirmQueryDownload"),
                 NoQueryLimit = GetBoolOrDefault(root, "noQueryLimit"),
                 AutoAssignRule = GetBoolOrDefault(root, "autoAssignRule"),
                 IncludeHiddenCells = ReadIncludeHiddenCells(root),
@@ -78,7 +78,7 @@ public sealed class JsonConnectorOptionsStore : IConnectorOptionsStore
         {
             useReference = options.UseReference,
             noWarning = options.NoWarning,
-            confirmLargeQuery = options.ConfirmLargeQuery,
+            noConfirmQueryDownload = options.NoConfirmQueryDownload,
             noQueryLimit = options.NoQueryLimit,
             autoAssignRule = options.AutoAssignRule,
             includeHiddenCells = options.IncludeHiddenCells,

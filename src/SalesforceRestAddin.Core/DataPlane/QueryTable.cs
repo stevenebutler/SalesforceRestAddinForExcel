@@ -15,7 +15,7 @@ public sealed class QueryTableInput
 
     public ConnectorOptions Options { get; init; } = ConnectorOptions.Default;
 
-    public bool ConfirmLargeQuery { get; init; }
+    public bool ConfirmQueryTableDownload { get; init; }
 
     public IReferenceResolver? ReferenceResolver { get; init; }
 
@@ -73,7 +73,7 @@ public static class QueryTable
         }
 
         var soql = SoqlQueryBuilder.BuildSelectQuery(binding, where);
-        if (input.ConfirmLargeQuery)
+        if (input.ConfirmQueryTableDownload)
         {
             var countError = await ValidateCountAsync(client, binding, where, cancellationToken).ConfigureAwait(false);
             if (countError is not null)

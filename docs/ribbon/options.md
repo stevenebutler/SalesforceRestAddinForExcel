@@ -30,7 +30,7 @@ Map to [`ConnectorOptions`](../../src/SalesforceRestAddin.Core/Session/Connector
 |----------|----------|---------|---------|
 | Use Reference Name/Id | `UseReference` | false | Reference field read/write in query/update/insert |
 | Do not show warning dialogs before commencing operations. | `NoWarning` | false | Skip insert confirm; skip include-hidden update confirm |
-| Confirm Large Query Download | `ConfirmLargeQuery` | false | Pre-query COUNT + confirm for Query Table Data |
+| Do not confirm Query Table downloads. | `NoConfirmQueryDownload` | false | When unchecked (default), Query Table Data runs COUNT + confirm before download |
 | No Query Limit | `NoQueryLimit` | false | Skip 3,500 row / 20 col caps on query-rows, delete, update limits |
 | Enable Auto Assign Rule | `AutoAssignRule` | false | When false (default), send `Sforce-Auto-Assign: FALSE` on create/update |
 | Include Hidden Columns/Rows | `IncludeHiddenCells` | false | When unchecked (default), update omits AutoFilter/manually hidden rows/columns — see [update-selected-cells.md](./update-selected-cells.md) |
@@ -83,7 +83,7 @@ Map to [`ConnectorOptions`](../../src/SalesforceRestAddin.Core/Session/Connector
 |--------|------------------|
 | `UseReference` | Query table, query rows, update, insert |
 | `NoWarning` | Insert confirm; Update (include-hidden path) |
-| `ConfirmLargeQuery` | Query table |
+| `NoConfirmQueryDownload` | Query table |
 | `NoQueryLimit` | Query rows, delete, update |
 | `AutoAssignRule` | Insert, update |
 | `IncludeHiddenCells` | Update |

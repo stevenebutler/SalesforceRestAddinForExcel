@@ -16,6 +16,7 @@ public sealed class JsonConnectorOptionsStoreTests
 
         await Assert.That(loaded.UseReference).IsFalse();
         await Assert.That(loaded.NoWarning).IsFalse();
+        await Assert.That(loaded.NoConfirmQueryDownload).IsFalse();
         await Assert.That(loaded.NoQueryLimit).IsFalse();
         await Assert.That(loaded.AutoAssignRule).IsFalse();
         await Assert.That(loaded.IncludeHiddenCells).IsFalse();
@@ -136,6 +137,7 @@ public sealed class JsonConnectorOptionsStoreTests
         {
             UseReference = true,
             NoWarning = true,
+            NoConfirmQueryDownload = true,
             NoQueryLimit = true,
             AutoAssignRule = true,
             IncludeHiddenCells = true,
@@ -146,6 +148,7 @@ public sealed class JsonConnectorOptionsStoreTests
 
         await Assert.That(loaded.UseReference).IsTrue();
         await Assert.That(loaded.NoWarning).IsTrue();
+        await Assert.That(loaded.NoConfirmQueryDownload).IsTrue();
         await Assert.That(loaded.NoQueryLimit).IsTrue();
         await Assert.That(loaded.AutoAssignRule).IsTrue();
         await Assert.That(loaded.IncludeHiddenCells).IsTrue();

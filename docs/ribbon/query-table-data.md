@@ -82,11 +82,13 @@ Starting column B, read repeating triplets: `[field label or API] | [operator] |
 
 ### FR-QTD-6 Pre-query confirmation (optional)
 
-When `ConfirmLargeQuery` is enabled in Options (default **off**):
+When `NoConfirmQueryDownload` is **false** in Options (default — show confirmation):
 
 1. `SELECT COUNT(Id) ...` with same WHERE.
 2. Reject if count > `excelLimit` (1,048,570).
-3. Ask user to confirm download count.
+3. Ask user to confirm download count (any result size).
+
+When `NoConfirmQueryDownload` is true → skip COUNT + confirm and proceed.
 
 Independent of `NoWarning` (which gates insert / include-hidden update confirms).
 

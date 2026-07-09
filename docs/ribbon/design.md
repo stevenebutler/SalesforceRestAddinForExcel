@@ -242,7 +242,7 @@ Pass `ConnectorOptions` into the operation input — no generic “operation con
 Extend `ConnectorOptions` when needed:
 
 - `CompositeBatchSize` (default 200)
-- `ConfirmLargeQuery` (optional; default off)
+- `NoConfirmQueryDownload` (optional; default false — COUNT + confirm unless opted out)
 
 ---
 
