@@ -1,0 +1,23 @@
+services:
+  dev:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    working_dir: /workspace
+    environment:
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      NUGET_PACKAGES: "/root/.nuget/packages"
+      FC_RUNNING_IN_CONTAINER: "1"
+      FC_GIT_COMMIT: ${FC_GIT_COMMIT:-unknown}
+      FC_CONFIGURATION: ${FC_CONFIGURATION:-Debug}
+      FC_SKIP_EXCELDNA_BUILD: ${FC_SKIP_EXCELDNA_BUILD:-0}
+    volumes:
+      - .:/workspace:z
+      - nuget-packages:/root/.nuget/packages
+    entrypoint: ["/workspace/scripts/dev-container.sh"]
+    command: ["shell"]
+    tty: true
+    stdin_open: true
+
+volumes:
+  nuget-packages:

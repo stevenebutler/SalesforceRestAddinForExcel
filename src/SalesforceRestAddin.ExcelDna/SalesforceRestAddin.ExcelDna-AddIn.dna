@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DnaLibrary Name="Salesforce REST Add-in for Excel" RuntimeVersion="v4.0" xmlns="http://schemas.excel-dna.net/addin/2020/07/dnalibrary">
+  <ExternalLibrary Path="SalesforceRestAddin.dll" ComServer="true" ExplicitExports="false" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+  <Reference Path="SalesforceRestAddin.Core.dll" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+  <Reference Path="SalesforceRestAddin.Windows.Ui.dll" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+  <!-- Core net48 NuGet dependencies (transitive via System.Text.Json); must be packed or AutoOpen fails at JsonUserLoginPreferencesStore -->
+  <Reference Path="System.Text.Json.dll" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+  <Reference Path="System.Text.Encodings.Web.dll" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+  <Reference Path="Microsoft.Bcl.AsyncInterfaces.dll" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+  <Reference Path="System.Buffers.dll" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+  <Reference Path="System.Memory.dll" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+  <Reference Path="System.Numerics.Vectors.dll" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+  <Reference Path="System.Runtime.CompilerServices.Unsafe.dll" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+  <Reference Path="System.Threading.Tasks.Extensions.dll" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+  <Reference Path="System.ValueTuple.dll" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+  <!-- WebView2 managed assemblies (OAuth); native WebView2Loader.dll is embedded in Windows.Ui -->
+  <Reference Path="Microsoft.Web.WebView2.Core.dll" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+  <Reference Path="Microsoft.Web.WebView2.Wpf.dll" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+</DnaLibrary>

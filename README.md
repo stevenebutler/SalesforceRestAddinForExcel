@@ -1,0 +1,43 @@
+# Salesforce REST Add-in for Excel
+
+Bring Salesforce into Excel with REST with native OAUTH Login support.
+
+Excel-DNA add-in for querying, updating, inserting, and deleting Salesforce records from worksheets. OAuth login (PKCE public client), REST describe/query/composite CRUD, and VBA automation via ProgId `ForceConnector.NextGen` for existing `ConnectorAdaptor` macros.
+
+## Layout
+
+```
+SalesforceRestAddinForExcel.sln
+├── src/
+│   ├── SalesforceRestAddin.Core/          # net48 + net10.0 — Salesforce + session (no Excel/UI)
+│   ├── SalesforceRestAddin.ExcelDna/      # net48 — Excel-DNA host, COM, ribbon
+│   └── SalesforceRestAddin.Windows.Ui/    # net48 — WPF dialogs (code-only); WebView2 for OAuth
+├── tests/
+│   └── SalesforceRestAddin.Tests/         # net10.0 — TUnit
+└── docs/ribbon/                           # Behavioral specs
+```
+
+## Build / test (Linux)
+
+```bash
+./dev.sh build   # Core + Windows.Ui + ExcelDna pack → ~/Downloads/SalesforceRestAddin/
+./dev.sh test    # Core net10.0 + TUnit
+```
+
+Packed outputs:
+
+- `SalesforceRestAddin64-packed.xll` — 64-bit Excel
+- `SalesforceRestAddin-packed.xll` — 32-bit Excel
+
+## VBA
+
+```vb
+Set addIn = Application.COMAddIns("ForceConnector.NextGen")
+Set GetForceAutomationObject = addIn.Object
+```
+
+ProgId and COM API GUIDs are unchanged for macro compatibility.
+
+## Docs
+
+See [AGENTS.md](AGENTS.md) and [docs/ribbon/README.md](docs/ribbon/README.md).

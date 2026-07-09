@@ -1,0 +1,64 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>SalesforceRestAddin</RootNamespace>
+    <AssemblyName>SalesforceRestAddin</AssemblyName>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <Description>Excel-DNA host for the Salesforce REST Add-in for Excel.</Description>
+    <ExcelDnaCreate32BitAddIn>true</ExcelDnaCreate32BitAddIn>
+    <ExcelDnaCreate64BitAddIn>true</ExcelDnaCreate64BitAddIn>
+    <ExcelAddInInclude>SalesforceRestAddin.Core.dll</ExcelAddInInclude>
+    <GitCommitId Condition="'$(GitCommitId)' == ''">$(FC_GIT_COMMIT)</GitCommitId>
+    <GitCommitId Condition="'$(GitCommitId)' == ''">unknown</GitCommitId>
+  </PropertyGroup>
+
+  <Target Name="GenerateBuildInfo" BeforeTargets="BeforeCompile">
+    <PropertyGroup>
+      <GeneratedBuildInfoFile>$(IntermediateOutputPath)BuildInfo.g.cs</GeneratedBuildInfoFile>
+    </PropertyGroup>
+    <ItemGroup>
+      <BuildInfoLines Include="namespace SalesforceRestAddin%3B" />
+      <BuildInfoLines Include="internal static class BuildInfo" />
+      <BuildInfoLines Include="{" />
+      <BuildInfoLines Include="    internal const string CommitId = &quot;$(GitCommitId)&quot;%3B" />
+      <BuildInfoLines Include="}" />
+    </ItemGroup>
+    <WriteLinesToFile
+      File="$(GeneratedBuildInfoFile)"
+      Lines="@(BuildInfoLines)"
+      Overwrite="true"
+      WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Compile Include="$(GeneratedBuildInfoFile)" />
+      <FileWrites Include="$(GeneratedBuildInfoFile)" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <None Include="SalesforceRestAddin.ExcelDna-AddIn.dna" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="SalesforceRestAddinRibbon.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ExcelDna.AddIn" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Office.Interop.Excel" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SalesforceRestAddin.Core\SalesforceRestAddin.Core.csproj" />
+    <ProjectReference Include="..\SalesforceRestAddin.Windows.Ui\SalesforceRestAddin.Windows.Ui.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+
+</Project>

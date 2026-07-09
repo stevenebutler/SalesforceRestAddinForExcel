@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>SalesforceRestAddin.Windows.Ui</RootNamespace>
+    <AssemblyName>SalesforceRestAddin.Windows.Ui</AssemblyName>
+    <UseWPF>false</UseWPF>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Description>WPF dialogs and WebView2 OAuth host for Salesforce REST Add-in for Excel (Windows runtime only).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Web.WebView2" GeneratePathProperty="true" />
+    <PackageReference Include="Polyfill" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="$(PkgMicrosoft_Web_WebView2)\runtimes\win-x64\native\WebView2Loader.dll" Link="WebView2Loader.win-x64.dll">
+      <LogicalName>SalesforceRestAddin.WebView2Loader.win-x64.dll</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="$(PkgMicrosoft_Web_WebView2)\runtimes\win-x86\native\WebView2Loader.dll" Link="WebView2Loader.win-x86.dll">
+      <LogicalName>SalesforceRestAddin.WebView2Loader.win-x86.dll</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="$(PkgMicrosoft_Web_WebView2)\runtimes\win-arm64\native\WebView2Loader.dll" Link="WebView2Loader.win-arm64.dll">
+      <LogicalName>SalesforceRestAddin.WebView2Loader.win-arm64.dll</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SalesforceRestAddin.Core\SalesforceRestAddin.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,7 @@
+{
+  "sobjects": [
+    { "name": "Account", "label": "Account", "queryable": true, "custom": false },
+    { "name": "Contact", "label": "Contact", "queryable": true, "custom": false },
+    { "name": "Custom__c", "label": "Custom Object", "queryable": true, "custom": true }
+  ]
+}

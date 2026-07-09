@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui" onLoad="OnRibbonLoad">
+  <ribbon>
+    <tabs>
+      <tab id="tabSalesforceRest" label="Salesforce Rest">
+        <group id="grpSalesforceRest" getLabel="GetConnectorGroupLabel">
+          <button id="btnAbout" label="About" size="large" onAction="OnAbout" />
+          <button id="btnTableWizard" label="Table Query Wizard" onAction="OnTableWizard" />
+          <button id="btnUpdateCells" label="Update Selected Cells" onAction="OnUpdateSelectedCells" />
+          <button id="btnInsertRows" label="Insert Selected Rows" onAction="OnInsertSelectedRows" />
+          <separator id="sepQuery" />
+          <button id="btnQuerySelectedRows" label="Query Selected Rows" onAction="OnQuerySelectedRows" />
+          <button id="btnQueryTableData" label="Query Table Data" onAction="OnQueryTableData" />
+          <button id="btnDeleteRecords" label="Delete Records" onAction="OnDeleteSelectedRecords" />
+          <separator id="sepSettings" />
+          <button id="btnDescribeSobject" label="Describe Sforce Object" onAction="OnDescribeSforceObject" />
+          <button id="btnOptions" label="Options" onAction="OnOptions" getEnabled="GetOptionsEnabled" />
+          <button id="btnLogout" label="Logout" onAction="OnLogout" getEnabled="GetLogoutEnabled" />
+        </group>
+      </tab>
+    </tabs>
+  </ribbon>
+</customUI>

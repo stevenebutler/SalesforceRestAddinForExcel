@@ -1,0 +1,43 @@
+{
+  "name": "Account",
+  "label": "Account",
+  "fields": [
+    {
+      "name": "Id",
+      "label": "Account ID",
+      "type": "id",
+      "createable": false,
+      "updateable": false
+    },
+    {
+      "name": "Name",
+      "label": "Account Name",
+      "type": "string",
+      "createable": true,
+      "updateable": true
+    },
+    {
+      "name": "Industry",
+      "label": "Industry",
+      "type": "picklist",
+      "createable": true,
+      "updateable": true,
+      "picklistValues": ["Technology", "Finance", "Other"]
+    },
+    {
+      "name": "ParentId",
+      "label": "Parent Account",
+      "type": "reference",
+      "createable": true,
+      "updateable": true,
+      "referenceTo": ["Account"]
+    },
+    {
+      "name": "Custom__c",
+      "label": "Custom Field",
+      "type": "string",
+      "createable": true,
+      "updateable": true
+    }
+  ]
+}

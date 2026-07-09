@@ -1,0 +1,119 @@
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using SalesforceRestAddin.Core;
+using SalesforceRestAddin.Core.Rest;
+using SalesforceRestAddin.Core.Session;
+using SalesforceRestAddin.Tests.Fixtures;
+
+namespace SalesforceRestAddin.Tests.Rest;
+
+public sealed class SalesforceDataClientTests
+{
+    [Test]
+    public async Task T_API_01_Describe_Parses_SObjectDescribe()
+    {
+        var (client, _) = CreateClient(handler =>
+        {
+            handler.Enqueue(HttpStatusCode.OK, LoadFixture("AccountDescribe.json"));
+        });
+
+        var describe = await client.DescribeAsync("Account");
+
+        await Assert.That(describe.Name).IsEqualTo("Account");
+        await Assert.That(describe.Fields.Any(f => f.Name == "Custom__c")).IsTrue();
+    }
+
+    [Test]
+    public async Task T_API_02_Query_Encodes_Soql_In_Url()
+    {
+        var (client, h) = CreateClient(handler =>
+        {
+            handler.Enqueue(HttpStatusCode.OK, LoadFixture("AccountQueryPage1.json"));
+        });
+
+        await client.QueryAsync("SELECT Id FROM Account");
+
+        await Assert.That(h.Requests[0].RequestUri!.Query).Contains("SELECT");
+    }
+
+    [Test]
+    public async Task ResolveAggregateCount_Uses_Expr0_Not_TotalSize()
+    {
+        var page = new QueryResultPage
+        {
+            TotalSize = 1,
+            Done = true,
+            Records = new[]
+            {
+                new Dictionary<string, object?> { ["expr0"] = 42L },
+            },
+        };
+
+        await Assert.That(SalesforceDataClient.ResolveAggregateCount(page)).IsEqualTo(42);
+    }
+
+    [Test]
+    public async Task ResolveAggregateCount_Falls_Back_To_TotalSize_For_Row_Queries()
+    {
+        var page = new QueryResultPage
+        {
+            TotalSize = 2,
+            Done = true,
+            Records = new[]
+            {
+                new Dictionary<string, object?> { ["Id"] = "001A" },
+                new Dictionary<string, object?> { ["Id"] = "001B" },
+            },
+        };
+
+        await Assert.That(SalesforceDataClient.ResolveAggregateCount(page)).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task T_API_03_ListObjects_Parses_Summaries()
+    {
+        var (client, _) = CreateClient(handler =>
+        {
+            handler.Enqueue(HttpStatusCode.OK, LoadFixture("SObjectList.json"));
+        });
+
+        var objects = await client.ListObjectsAsync();
+        await Assert.That(objects.Count).IsEqualTo(3);
+        await Assert.That(objects.Any(o => o.Name == "Account")).IsTrue();
+    }
+
+    private static (SalesforceDataClient client, SequentialMockHttpHandler handler) CreateClient(
+        Action<SequentialMockHttpHandler>? configure = null)
+    {
+        var handler = new SequentialMockHttpHandler();
+        configure?.Invoke(handler);
+        var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.my.salesforce.com") };
+        var session = new SessionContext
+        {
+            AccessToken = "token",
+            InstanceUrl = "https://example.my.salesforce.com",
+            Id = "https://login.salesforce.com/id/00D/005",
+            IssuedAtUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+        };
+        session.SetApiVersion("66.0");
+        var creds = new InMemorySessionCredentialStore();
+        var prefs = new InMemoryUserLoginPreferencesStore();
+        var oauth = SalesforceRestAddin.Core.OAuth.SalesforceOAuthOptions.Default;
+        var authenticator = new SessionAuthenticator(creds, new SalesforceRestAddin.Core.OAuth.SalesforceOAuthClient(http), oauth);
+        var orchestrator = new SessionLoginOrchestrator(session, authenticator, new FakeInteractiveLoginHandler());
+        var authClient = new SalesforceAuthenticatedClient(
+            http,
+            session,
+            prefs,
+            new SessionAccessTokenRefresher(authenticator),
+            orchestrator);
+        return (new SalesforceDataClient(authClient, session), handler);
+    }
+
+    private static string LoadFixture(string name)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", name);
+        return File.ReadAllText(path);
+    }
+}

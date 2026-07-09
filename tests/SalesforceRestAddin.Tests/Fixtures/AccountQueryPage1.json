@@ -1,0 +1,8 @@
+{
+  "totalSize": 2,
+  "done": true,
+  "records": [
+    { "attributes": { "type": "Account", "url": "/Account/1" }, "Id": "001A", "Name": "Acme", "Industry": "Technology" },
+    { "attributes": { "type": "Account", "url": "/Account/2" }, "Id": "001B", "Name": "Beta", "Industry": "Finance" }
+  ]
+}

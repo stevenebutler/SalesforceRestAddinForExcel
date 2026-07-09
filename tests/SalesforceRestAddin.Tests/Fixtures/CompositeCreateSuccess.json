@@ -1,0 +1,5 @@
+{
+  "compositeResponse": [
+    { "body": { "id": "001NEW0000000001", "success": true, "errors": [] }, "httpStatusCode": 201, "referenceId": "ref1" }
+  ]
+}

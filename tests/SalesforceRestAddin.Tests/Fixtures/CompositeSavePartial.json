@@ -1,0 +1,6 @@
+{
+  "compositeResponse": [
+    { "body": { "id": "001000000000001", "success": true, "errors": [] }, "httpStatusCode": 200, "referenceId": "ref1" },
+    { "body": { "success": false, "errors": [{ "statusCode": "FIELD_CUSTOM_VALIDATION_EXCEPTION", "message": "Validation failed" }] }, "httpStatusCode": 200, "referenceId": "ref2" }
+  ]
+}
