@@ -20,9 +20,4 @@ public static class ProductBranding
     public const string RepositoryUrl = "https://github.com/stevenebutler/SalesforceRestAddinForExcel";
 
     public const string RepositoryDisplayName = "stevenebutler/SalesforceRestAddinForExcel";
-
-    /// <summary>Legacy VSTO Force.com Connector that inspired this REST/Excel-DNA port.</summary>
-    public const string InspirationRepositoryUrl = "https://github.com/good-ghost/ForceConnector";
-
-    public const string InspirationRepositoryDisplayName = "good-ghost/ForceConnector";
 }
