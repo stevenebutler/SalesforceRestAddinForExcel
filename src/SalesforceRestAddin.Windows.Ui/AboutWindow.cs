@@ -62,7 +62,7 @@ public sealed class AboutWindow : Window
 
         var creditBlock = new TextBlock { Margin = new Thickness(0, 0, 0, 16), TextWrapping = TextWrapping.Wrap };
         creditBlock.Inlines.Add("Inspired by ");
-        var inspirationLink = new Hyperlink(new Run(ProductBranding.InspirationRepositoryDisplayName))
+        var inspirationLink = new Hyperlink(new Run(ProductBranding.InspirationProductName))
         {
             NavigateUri = new Uri(ProductBranding.InspirationRepositoryUrl),
         };

@@ -32,7 +32,7 @@ Display at minimum:
 | Version | Build/add-in commit id | Implemented |
 | Author / copyright | Steven Butler / © 2026 | Implemented |
 | Link | https://github.com/stevenebutler/SalesforceRestAddinForExcel (opens in browser) | Implemented |
-| Credits | Inspired by https://github.com/good-ghost/ForceConnector (opens in browser) | Implemented |
+| Credits | Inspired by Force.com Connector Next Generation (https://github.com/good-ghost/ForceConnector) | Implemented |
 
 ### FR-AB-3 Dismissal
 

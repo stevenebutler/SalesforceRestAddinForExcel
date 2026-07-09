@@ -21,7 +21,12 @@ public static class ProductBranding
 
     public const string RepositoryDisplayName = "stevenebutler/SalesforceRestAddinForExcel";
 
-    /// <summary>Legacy VSTO Force.com Connector that inspired this REST/Excel-DNA port.</summary>
+    /// <summary>
+    /// Legacy VSTO Force.com Connector Next Generation that inspired the worksheet/ribbon workflow.
+    /// The ProgId / ConnectorAdaptor VBA API is separate work (not from that original project).
+    /// </summary>
+    public const string InspirationProductName = "Force.com Connector Next Generation";
+
     public const string InspirationRepositoryUrl = "https://github.com/good-ghost/ForceConnector";
 
     public const string InspirationRepositoryDisplayName = "good-ghost/ForceConnector";

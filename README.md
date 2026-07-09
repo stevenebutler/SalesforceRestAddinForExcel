@@ -56,7 +56,7 @@ Set addIn = Application.COMAddIns("ForceConnector.NextGen")
 Set GetForceAutomationObject = addIn.Object
 ```
 
-ProgId and COM API GUIDs are unchanged for macro compatibility.
+The ProgId `ForceConnector.NextGen` preserves VBA compatibility with enhancements the author of this project added in a fork of Force.com Connector Next Generation (see Credits).
 
 ## Docs
 
@@ -68,4 +68,12 @@ See [AGENTS.md](AGENTS.md) and [docs/ribbon/README.md](docs/ribbon/README.md).
 
 ## Credits
 
-Inspired by the [Force.com Connector](https://github.com/good-ghost/ForceConnector) Excel VSTO add-in (`good-ghost/ForceConnector`, MIT). This project is a REST + Excel-DNA reimplementation with VBA ProgId compatibility for existing macros.
+Inspired by the [Force.com Connector Next Generation](https://github.com/good-ghost/ForceConnector) Excel VSTO add-in (`good-ghost/ForceConnector`, MIT).
+
+This REST + Excel-DNA project reimplements that worksheet/ribbon workflow with:
+* Completely redesigned Excel interoperability for maximum performance.
+* UI improvements for varying DPI settings.
+* More integrated, modern OAuth authentication flows.
+
+Reference fields show Ids rather than names to simplify VBA scripting of cross-table interactions. Other behaviour differences may exist; please raise them as issues for consideration.
+
