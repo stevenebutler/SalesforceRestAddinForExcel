@@ -29,6 +29,26 @@ Packed outputs:
 - `SalesforceRestAddin64-packed.xll` — 64-bit Excel
 - `SalesforceRestAddin-packed.xll` — 32-bit Excel
 
+## Install (Windows)
+
+Each successful `develop` build publishes a rolling [**latest** release](https://github.com/stevenebutler/SalesforceRestAddinForExcel/releases/latest) with both XLLs and `Install-SalesforceRestAddin.ps1`.
+
+In PowerShell:
+
+```powershell
+irm https://github.com/stevenebutler/SalesforceRestAddinForExcel/releases/latest/download/Install-SalesforceRestAddin.ps1 -OutFile Install-SalesforceRestAddin.ps1
+Unblock-File .\Install-SalesforceRestAddin.ps1
+.\Install-SalesforceRestAddin.ps1
+```
+
+Or download and run in one step:
+
+```powershell
+irm https://github.com/stevenebutler/SalesforceRestAddinForExcel/releases/latest/download/Install-SalesforceRestAddin.ps1 | iex
+```
+
+The script detects Excel bitness, downloads the matching packed XLL, removes Mark of the Web, and registers the add-in for the current user. Restart Excel after install. Uninstall with `.\Install-SalesforceRestAddin.ps1 -Uninstall`.
+
 ## VBA
 
 ```vb

@@ -1,6 +1,6 @@
 # Ribbon button requirements
 
-Behavioral specifications for the **Force Connector** ribbon (Excel-DNA + WPF). Each button has its own file; shared rules live in [common-performance-requirements.md](./common-performance-requirements.md) and UI policy in [ui-platform.md](./ui-platform.md).
+Behavioral specifications for the **Salesforce Rest** ribbon (Excel-DNA + WPF). Each button has its own file; shared rules live in [common-performance-requirements.md](./common-performance-requirements.md) and UI policy in [ui-platform.md](./ui-platform.md).
 
 | Doc | Purpose |
 |-----|---------|

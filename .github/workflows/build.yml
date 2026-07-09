@@ -43,7 +43,7 @@ jobs:
         env:
           FC_CONFIGURATION: Release
 
-      - name: Stage packed XLLs
+      - name: Stage packed XLLs and installer
         # develop → latest release; other branches / PRs → CI artifacts. main needs neither.
         if: github.ref != 'refs/heads/main'
         run: |
@@ -59,6 +59,7 @@ jobs:
           fi
           cp -f "${packed64[0]}" "$DIST_DIR/SalesforceRestAddin64-packed.xll"
           cp -f "${packed32[0]}" "$DIST_DIR/SalesforceRestAddin-packed.xll"
+          cp -f scripts/Install-SalesforceRestAddin.ps1 "$DIST_DIR/Install-SalesforceRestAddin.ps1"
           ls -la "$DIST_DIR"
 
       - name: Upload 64-bit XLL artifact
@@ -79,6 +80,15 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
+      - name: Upload installer script artifact
+        if: github.ref != 'refs/heads/develop' && github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Install-SalesforceRestAddin
+          path: dist/Install-SalesforceRestAddin.ps1
+          if-no-files-found: error
+          retention-days: 3
+
       - name: Publish latest develop release
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
         env:
@@ -86,12 +96,35 @@ jobs:
         run: |
           set -euo pipefail
           short_sha="$(echo '${{ github.sha }}' | cut -c1-7)"
+          repo='${{ github.repository }}'
           notes="$(cat <<EOF
           Rolling build from \`develop\` (\`${short_sha}\`).
 
-          Download the XLL that matches your Excel bitness:
+          ## Automated install (Windows)
+
+          In PowerShell (current user):
+
+          \`\`\`powershell
+          irm https://github.com/${repo}/releases/latest/download/Install-SalesforceRestAddin.ps1 -OutFile Install-SalesforceRestAddin.ps1
+          Unblock-File .\Install-SalesforceRestAddin.ps1
+          .\Install-SalesforceRestAddin.ps1
+          \`\`\`
+
+          Or one-liner (downloads and runs):
+
+          \`\`\`powershell
+          irm https://github.com/${repo}/releases/latest/download/Install-SalesforceRestAddin.ps1 | iex
+          \`\`\`
+
+          The script detects Excel bitness, downloads the matching XLL from this release, unblocks it, and registers it to load on Excel startup.
+
+          Uninstall: \`.\Install-SalesforceRestAddin.ps1 -Uninstall\`
+
+          ## Manual download
+
           - \`SalesforceRestAddin64-packed.xll\` — 64-bit Excel
           - \`SalesforceRestAddin-packed.xll\` — 32-bit Excel
+          - \`Install-SalesforceRestAddin.ps1\` — installer script
 
           Each successful \`develop\` build replaces this release.
           EOF
@@ -106,4 +139,5 @@ jobs:
             --target "${{ github.sha }}" \
             --latest \
             "$DIST_DIR/SalesforceRestAddin64-packed.xll" \
-            "$DIST_DIR/SalesforceRestAddin-packed.xll"
+            "$DIST_DIR/SalesforceRestAddin-packed.xll" \
+            "$DIST_DIR/Install-SalesforceRestAddin.ps1"
