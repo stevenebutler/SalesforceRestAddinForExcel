@@ -209,8 +209,11 @@ Status column left blank for implementation tracking.
 |----|-----|------|-----|
 | T-API-01 | — | Describe parses into `SObjectDescribe` | HTTP |
 | T-API-02 | — | Query encodes SOQL in URL correctly | HTTP |
-| T-API-03 | — | Composite create serializes `attributes.type` | HTTP |
+| T-API-03 | — | List objects parses summaries | HTTP |
 | T-API-04 | — | 401 → `SalesforceAuthenticatedClient` recovery (existing tests extended) | HTTP |
+| T-API-05 | NFR-HTTP-1 | Large composite create body → `Content-Encoding: gzip` | HTTP |
+| T-API-06 | NFR-HTTP-1 | Small composite create body → no content encoding | HTTP |
+| T-HTTP-01 | NFR-HTTP-1 | `GzipJsonContent` threshold + factory decompression flags | Unit |
 
 ---
 

@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using SalesforceRestAddin.Core;
 using SalesforceRestAddin.Core.Rest;
 using SalesforceRestAddin.Core.Session;
@@ -81,6 +82,80 @@ public sealed class SalesforceDataClientTests
         var objects = await client.ListObjectsAsync();
         await Assert.That(objects.Count).IsEqualTo(3);
         await Assert.That(objects.Any(o => o.Name == "Account")).IsTrue();
+    }
+
+    [Test]
+    public async Task T_API_05_Create_Gzips_Large_Composite_Body()
+    {
+        string? contentEncoding = null;
+        byte[]? bodyBytes = null;
+
+        var (client, _) = CreateClient(handler =>
+        {
+            handler.Enqueue(request =>
+            {
+                contentEncoding = request.Content?.Headers.ContentEncoding.ToString();
+                bodyBytes = request.Content?.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        "[{\"success\":true,\"id\":\"001xx0000000001\",\"errors\":[]}]",
+                        Encoding.UTF8,
+                        "application/json"),
+                };
+            });
+        });
+
+        var records = new List<Dictionary<string, object?>>();
+        for (var i = 0; i < 40; i++)
+        {
+            records.Add(new Dictionary<string, object?>
+            {
+                ["attributes"] = new Dictionary<string, object?> { ["type"] = "Account" },
+                ["Name"] = $"Account-{i}-with-enough-payload-bytes-to-cross-gzip-threshold",
+            });
+        }
+
+        var results = await client.CreateAsync(records, sendPreventAutoAssignHeader: false);
+
+        await Assert.That(results.Count).IsEqualTo(1);
+        await Assert.That(contentEncoding).IsEqualTo("gzip");
+        await Assert.That(bodyBytes).IsNotNull();
+        await Assert.That(bodyBytes!.Length).IsGreaterThan(0);
+    }
+
+    [Test]
+    public async Task T_API_06_Create_Leaves_Small_Body_Uncompressed()
+    {
+        string? contentEncoding = null;
+
+        var (client, _) = CreateClient(handler =>
+        {
+            handler.Enqueue(request =>
+            {
+                contentEncoding = request.Content?.Headers.ContentEncoding.ToString();
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        "[{\"success\":true,\"id\":\"001xx0000000001\",\"errors\":[]}]",
+                        Encoding.UTF8,
+                        "application/json"),
+                };
+            });
+        });
+
+        var records = new[]
+        {
+            new Dictionary<string, object?>
+            {
+                ["attributes"] = new Dictionary<string, object?> { ["type"] = "Account" },
+                ["Name"] = "A",
+            },
+        };
+
+        await client.CreateAsync(records, sendPreventAutoAssignHeader: false);
+
+        await Assert.That(string.IsNullOrEmpty(contentEncoding)).IsTrue();
     }
 
     private static (SalesforceDataClient client, SequentialMockHttpHandler handler) CreateClient(

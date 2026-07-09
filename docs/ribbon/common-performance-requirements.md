@@ -69,6 +69,15 @@ Treat each property get/set on `Excel.Range` / `Excel.Worksheet` as expensive.
 - Batch size should be **configurable** (`ConnectorOptions` or dedicated setting), defaulting to 200 where REST allows.
 - Send `Sforce-Auto-Assign: FALSE` on create/update when `AutoAssignRule` is false (product default). See [options.md](./options.md).
 
+## HTTP compression (NFR-HTTP-1)
+
+Salesforce REST supports gzip/deflate ([Compression Headers](https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/intro_rest_compression.htm)).
+
+| Direction | Mechanism |
+|-----------|-----------|
+| **Responses** | Shared `HttpClient` uses `AutomaticDecompression = GZip \| Deflate` (`SalesforceHttpClientFactory`) so `Accept-Encoding` is sent and bodies are unwrapped. |
+| **Requests** | Composite create/update JSON bodies ≥ 512 UTF-8 bytes are gzip-compressed with `Content-Encoding: gzip` (`GzipJsonContent`). Smaller bodies stay plain JSON. OAuth token posts are not compressed. |
+
 ## Selection and table limits
 
 Defaults (overridable via `NoQueryLimit` where noted):

@@ -1,9 +1,8 @@
 using System;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 using SalesforceRestAddin.Core;
+using SalesforceRestAddin.Core.Net;
 using SalesforceRestAddin.Core.Session;
 using SalesforceRestAddin.Core.Tables;
 
@@ -280,7 +279,7 @@ public sealed class SalesforceDataClient
 
         var payload = JsonSerializer.Serialize(new { records, allOrNone = false }, JsonOptions);
         SessionFlowTrace.Log($"REST {method.ToLowerInvariant()} request body: {TrimForLog(payload)}");
-        request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
+        request.Content = GzipJsonContent.Create(payload);
         var json = await SendAndReadAsync(request, method.ToLowerInvariant(), cancellationToken).ConfigureAwait(false);
         using var document = JsonDocument.Parse(json);
         return document.RootElement.EnumerateArray().Select(element =>

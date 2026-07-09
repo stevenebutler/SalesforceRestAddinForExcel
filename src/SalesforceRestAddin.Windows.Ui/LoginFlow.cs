@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Windows;
 using SalesforceRestAddin.Core;
+using SalesforceRestAddin.Core.Net;
 using SalesforceRestAddin.Core.OAuth;
 using SalesforceRestAddin.Core.Rest;
 using SalesforceRestAddin.Core.Session;
@@ -88,7 +89,7 @@ public static class LoginFlow
 
         var oauth = SalesforceOAuthOptions.Default;
         var loginBaseUrl = SalesforceLoginUrlBuilder.BuildLoginBaseUrl(loginOptions);
-        using var httpClient = http ?? new HttpClient();
+        using var httpClient = http ?? SalesforceHttpClientFactory.Create();
         var authenticator = new SessionAuthenticator(
             credentialStore,
             new SalesforceOAuthClient(httpClient),

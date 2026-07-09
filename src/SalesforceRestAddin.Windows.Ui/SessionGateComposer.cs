@@ -1,6 +1,7 @@
 using System;
 using System.Net.Http;
 using SalesforceRestAddin.Core;
+using SalesforceRestAddin.Core.Net;
 using SalesforceRestAddin.Core.OAuth;
 using SalesforceRestAddin.Core.Rest;
 using SalesforceRestAddin.Core.Session;
@@ -67,7 +68,7 @@ public static class SessionGateComposer
         metadataCache ??= new FileMetadataCache(SalesforceRestAddinDataPaths.MetadataCacheDirectory);
         parsedMetadataCache ??= new ParsedMetadataCache();
 
-        var httpClient = http ?? new HttpClient();
+        var httpClient = http ?? SalesforceHttpClientFactory.Create();
         var oauth = SalesforceOAuthOptions.Default;
         var authenticator = new SessionAuthenticator(
             credentialStore,
