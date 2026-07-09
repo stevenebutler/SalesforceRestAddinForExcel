@@ -121,6 +121,11 @@ public static class UpdateCells
         {
             RecordsProcessed = records.Count,
             RowOutcomes = outcomes,
+            ErrorSummary = RowOutcomeErrorSummary.FromFailures(
+                outcomes,
+                input.Binding.Snapshot.StartRow,
+                "Update",
+                records.Count),
         };
     }
 

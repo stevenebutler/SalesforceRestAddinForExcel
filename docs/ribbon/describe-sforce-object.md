@@ -1,7 +1,6 @@
 # Describe Sforce Object
 
 **Ribbon:** `btnDescribeSobject` — “Describe Sforce Object”  
-**Legacy:** `DescribeCustomObject.DescribeSalesforceObjectsBySOAP()` → `processDescribeCustomObject`  
 **Login required:** Yes  
 **COM / VBA:** None
 
@@ -25,14 +24,14 @@ User picks one or more Salesforce objects; add-in creates a **new worksheet per 
 
 - WPF modal window listing queryable objects (search/filter) — `DescribeObjectPickerWindow` in `SalesforceRestAddin.Windows.Ui`.
 - User may select **multiple** objects.
-- **Dropped from legacy:** translation language picker (`METAAPI.getTranslations`) — not ported.
+- No translation language picker — Translation Helper / METAAPI is out of scope ([AGENTS.md](../../AGENTS.md)).
 
 ### FR-DSO-3 Metadata source
 
-| Legacy | New implementation |
-|--------|-------------------|
-| SOAP `DescribeSObject` | **REST** `GET .../sobjects/{name}/describe` |
-| METAAPI field translations | **Dropped** — use standard labels from describe |
+| Source | Implementation |
+|--------|----------------|
+| Object / field metadata | **REST** `GET .../sobjects/{name}/describe` |
+| Field labels | Standard labels from describe (no METAAPI translations) |
 
 ### FR-DSO-4 Worksheet output
 
@@ -40,7 +39,7 @@ Per selected object:
 
 1. Create new worksheet (name derived from object label/API — avoid invalid sheet name characters).
 2. Write title/header rows identifying object.
-3. Write field grid with columns comparable to legacy (~13 columns), minimally:
+3. Write field grid with columns covering at least:
 
 | Column concept | Content |
 |----------------|---------|
@@ -53,7 +52,7 @@ Per selected object:
 | Reference targets | `referenceTo` |
 | Picklist values | joined list for picklists |
 
-4. **Field ordering:** named standard fields (legacy fixed set) → remaining standard → custom (`__c`).
+4. **Field ordering:** well-known standard fields first → remaining standard → custom (`__c`).
 
 ### FR-DSO-5 Progress and cancel
 
@@ -69,9 +68,7 @@ Per selected object:
 
 ### NFR-DSO-1 Bulk value write
 
-**Legacy good pattern:** build `object[numFields, numCols]` then `rng.Value = data` once.
-
-**Target:** preserve single bulk assign for the main grid.
+- Build `object[numFields, numCols]` then assign with one `rng.Value = data`.
 
 ### NFR-DSO-2 Core ownership
 
@@ -97,18 +94,12 @@ Per selected object:
 
 ---
 
-## Legacy reference
-
-- `ForceConnector/DescribeCustomObject.cs`
-- `ForceConnector/processDescribeCustomObject.cs`
-- `SOAPAPI.DescribeSObject` — **replace with REST**
-
 ## Out of scope
 
 - Translation Helper metadata columns
-- `GET_MANAGED` option (translation-only in legacy Options UI)
+- Managed-data / translation-only options
 - Downloading translations for describe grid
-- Per-cell comments on the describe grid (legacy `renderComments`) — bulk values only
+- Per-cell comments on the describe grid — bulk values only
 
 ## Relation to Table Wizard
 

@@ -47,6 +47,7 @@ public static class SObjectDescribeJsonParser
                 Updateable = fieldElement.TryGetProperty("updateable", out var u) && u.GetBoolean(),
                 Nillable = fieldElement.TryGetProperty("nillable", out var n) && n.GetBoolean(),
                 Custom = fieldElement.TryGetProperty("custom", out var custom) && custom.GetBoolean(),
+                NameField = fieldElement.TryGetProperty("nameField", out var nameField) && nameField.GetBoolean(),
                 Length = fieldElement.TryGetProperty("length", out var len) && len.TryGetInt32(out var length) ? length : null,
                 Precision = fieldElement.TryGetProperty("precision", out var prec) && prec.TryGetInt32(out var precision) ? precision : null,
                 Scale = fieldElement.TryGetProperty("scale", out var scaleEl) && scaleEl.TryGetInt32(out var scale) ? scale : null,

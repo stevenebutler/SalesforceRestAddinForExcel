@@ -124,13 +124,14 @@ public sealed class ForceTableParserTests
     }
 
     [Test]
-    public async Task T_TBL_09_Id_Not_First_Column_Validation_Error()
+    public async Task T_TBL_09_Id_Not_First_Column_Binds_Successfully()
     {
         var snapshot = ForceTableSnapshots.IdNotFirstColumn();
         var result = ForceTableBinder.Bind(snapshot, AccountDescribe);
 
-        await Assert.That(result.Succeeded).IsFalse();
-        await Assert.That(result.Errors[0].Message).Contains("first field column");
+        await Assert.That(result.Succeeded).IsTrue();
+        await Assert.That(result.Binding!.IdColumnIndex).IsEqualTo(1);
+        await Assert.That(result.Binding.Columns[1].Field.IsId).IsTrue();
     }
 
     [Test]

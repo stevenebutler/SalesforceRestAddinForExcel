@@ -66,6 +66,11 @@ public static class DeleteRecords
         {
             RecordsProcessed = ids.Count,
             RowOutcomes = outcomes,
+            ErrorSummary = RowOutcomeErrorSummary.FromFailures(
+                outcomes,
+                input.Binding.Snapshot.StartRow,
+                "Delete",
+                ids.Count),
         };
     }
 }

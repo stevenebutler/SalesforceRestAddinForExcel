@@ -11,7 +11,7 @@ public static class ForceTableReader
     /// <summary>
     /// Captures the ForceConnector table containing <paramref name="activeCell"/>.
     /// Tables are delimited by blank columns in the header row; the object name sits
-    /// in the cell above the first (Id) column of that header block.
+    /// in the cell above the first field column of that header block.
     /// </summary>
     public static ForceTableSnapshot Capture(Application application, Worksheet worksheet, Range activeCell)
     {
@@ -75,7 +75,7 @@ public static class ForceTableReader
             var address = objectCell.Address[false, false];
             throw new InvalidOperationException(
                 $"Could not locate an object name in cell {address}. " +
-                "The entity name must appear above the first (Id) column of the table.");
+                "The entity name must appear above the first field column of the table.");
         }
 
         var table = worksheet.Range[

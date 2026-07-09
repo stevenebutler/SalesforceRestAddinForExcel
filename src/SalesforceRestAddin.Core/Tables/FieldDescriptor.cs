@@ -16,6 +16,9 @@ public sealed class FieldDescriptor
 
     public bool Custom { get; init; }
 
+    /// <summary>Salesforce describe <c>nameField</c> — the object's display-name field.</summary>
+    public bool NameField { get; init; }
+
     public int? Length { get; init; }
 
     public int? Precision { get; init; }

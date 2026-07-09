@@ -1,7 +1,6 @@
 # Delete Records
 
 **Ribbon:** `btnDeleteRecords` — “Delete Records”  
-**Legacy:** `ForceConnector.DeleteSelectedRecords()` → `Operation.DeleteRecords()`  
 **Login required:** Yes  
 **COM / VBA:** `DeleteSelectedRecordsApi()` — same behavior
 
@@ -11,7 +10,7 @@ See also: [common-performance-requirements.md](./common-performance-requirements
 
 ## Summary
 
-DELETE Salesforce records for selected table rows using Ids from the Id column. Successful rows show **`deleted`** in the Id cell; failures get a row comment.
+DELETE Salesforce records for selected table rows using Ids from the Id column. Successful rows show **`deleted`** in the Id cell; failures get an Id-cell comment and the scrollable error dialog.
 
 ---
 
@@ -26,7 +25,7 @@ DELETE Salesforce records for selected table rows using Ids from the Id column. 
 
 ### FR-DR-2 Confirmation
 
-- **Always** confirm before delete (legacy dialog text incorrectly says “download” — use clear delete wording in new UI).
+- **Always** confirm before delete (clear delete wording — not “download”).
 - Cancel → no API calls.
 
 ### FR-DR-3 Id collection
@@ -45,9 +44,10 @@ DELETE Salesforce records for selected table rows using Ids from the Id column. 
 | Outcome | Sheet effect |
 |---------|----------------|
 | Success | Id cell value ← literal `"deleted"` |
-| Failure | Comment on row’s first cell: *“Delete Row Failed”* + SF error detail when available |
+| Failure | Id cell comment: *“Delete Row Failed”* + SF error detail when available |
+| Summary | `ErrorDialogWindow` with per-row SF errors when any delete fails (same text as comments) |
 
-**Legacy quirk:** failure branch checks `rw.Cells[1, 1]` for some paths — new implementation must key off **Id column**, not column A.
+Failure annotations must key off the **Id column**, not sheet column A.
 
 ### FR-DR-6 Progress and cancel
 
@@ -63,7 +63,7 @@ DELETE Salesforce records for selected table rows using Ids from the Id column. 
 
 ### NFR-DR-1 Bulk Id read
 
-- Read Ids for chunk via single `Intersect(g_ids, todo)` value array (legacy builds `string[]` from rows — optimize to array from one range read).
+- Read Ids for chunk via a single range intersection → value array.
 
 ### NFR-DR-2 Bulk status write
 
@@ -75,7 +75,7 @@ DELETE Salesforce records for selected table rows using Ids from the Id column. 
 
 ### NFR-DR-4 Safety
 
-- Destructive operation — confirmation cannot be disabled by `NoWarning` in legacy; keep hard confirm unless product explicitly changes policy.
+- Destructive operation — confirmation cannot be disabled by `NoWarning`; keep hard confirm unless product explicitly changes policy.
 
 ### NFR-DR-5 Core tests
 
@@ -92,11 +92,6 @@ DELETE Salesforce records for selected table rows using Ids from the Id column. 
 | `DELETE .../composite/sobjects` | Delete by ids |
 
 ---
-
-## Legacy reference
-
-- `ForceConnector/processDatabaseDeleteRows.cs`
-- `Operation.deleteSelectedRange`
 
 ## Data integrity
 

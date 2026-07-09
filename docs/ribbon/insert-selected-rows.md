@@ -1,7 +1,6 @@
 # Insert Selected Rows
 
 **Ribbon:** `btnInsertRows` — “Insert Selected Rows”  
-**Legacy:** `ForceConnector.InsertSelectedRows()` → `Operation.InsertRows()`  
 **Login required:** Yes  
 **COM / VBA:** `InsertSelectedRowsApi()` — same behavior
 
@@ -11,7 +10,7 @@ See also: [common-performance-requirements.md](./common-performance-requirements
 
 ## Summary
 
-POST new Salesforce records for selected table rows whose Id cell contains **`New`** (case-insensitive). On success, writes returned Salesforce Id into the Id cell.
+POST new Salesforce records for selected table rows whose Id cell contains **`New`** (case-insensitive). On success, writes returned Salesforce Id into the Id cell. Supports **multiple** selected rows in batches.
 
 ---
 
@@ -22,12 +21,12 @@ POST new Salesforce records for selected table rows whose Id cell contains **`Ne
 1. Authenticated session.
 2. Valid ForceConnector table with Id column.
 3. Selection is within table body.
-4. Selection row count ≤ **3,500** (legacy has **no** `NoQueryLimit` bypass for insert).
+4. Selection row count ≤ **3,500** (`NoQueryLimit` does **not** bypass this cap for insert).
 
 ### FR-ISR-2 Confirmation
 
 - Confirm before processing **unless** `NoWarning` is set (Options: *Do not show warning dialogs before commencing operations.*):
-  - *“You try to insert N records. Are you sure?”* (N = selected row count, not “New” row count).
+  - *“Insert N record(s) into {ObjectLabel}?”* (N = selected row count, not “New” row count; singular/plural as appropriate).
 - When `NoWarning` is true → skip the dialog and proceed.
 - Cancel → no API calls.
 
@@ -67,17 +66,13 @@ Per eligible row:
 |---------|----------------|
 | Success | Id cell ← returned 18-char Id; clear row highlight and stale comments |
 | Failure | Row highlight warning color; Id cell comment with SF errors |
-| Summary | Optional dialog if any failures |
+| Summary | `ErrorDialogWindow` with per-row SF errors when any insert fails (same text as comments, easier to read) |
 
 ---
 
 ## Non-functional requirements
 
 ### NFR-ISR-1 Bulk read
-
-**Legacy anti-pattern:** `g_table.Cells[row, col].value` per field per row.
-
-**Target:**
 
 - For each chunk, read a single `object[,]` covering selected rows × header columns.
 - Build create payloads in Core from array + `headerFields` metadata.
@@ -88,7 +83,7 @@ Per eligible row:
 
 ### NFR-ISR-3 Error path
 
-- Per failed row: comment on Id cell (legacy). O(failures) COM acceptable.
+- Per failed row: comment on Id cell. O(failures) COM acceptable.
 
 ### NFR-ISR-4 Core tests
 
@@ -104,14 +99,3 @@ Per eligible row:
 |------|---------|
 | Describe sobject | Table setup |
 | `POST .../composite/sobjects` | Create records |
-
----
-
-## Legacy reference
-
-- `ForceConnector/processDatabaseInsertRows.cs`
-- `Operation.insertSelectedRange`, `Operation.insertResultHandler`
-
-## Screen tip note
-
-Legacy screentip says “one row”; implementation supports **multiple** selected rows in batches.

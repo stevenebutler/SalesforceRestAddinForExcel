@@ -91,8 +91,8 @@ Each file under `DataPlane/` should hold **one ribbon/COM operation end-to-end**
 
 What Excel hands Core after one bulk read. Plain data — no Excel types.
 
-| Member | Source (legacy) |
-|--------|-----------------|
+| Member | Source |
+|--------|--------|
 | `ObjectApiName` | A1 comment or value |
 | `CriteriaRow` | Row 1 from col B (labels, operators, values) |
 | `HeaderLabels` | Row 2 |
@@ -184,7 +184,7 @@ Shared steps live in `Tables/`, `Soql/`, `Values/`. The operation file sequences
 
 WPF wizard in `SalesforceRestAddin.Windows.Ui`. Core helpers only:
 
-- Field ordering for row 2 (same rules as legacy wizard)
+- Field ordering for row 2 (Id → Name → Required (std/custom) → Standard → Custom → Read-only (std/custom))
 - Default WHERE when no clauses
 - Calls `QueryTable` at the end — no second implementation
 
@@ -242,7 +242,7 @@ Pass `ConnectorOptions` into the operation input — no generic “operation con
 Extend `ConnectorOptions` when needed:
 
 - `CompositeBatchSize` (default 200)
-- `ConfirmLargeQuery` (optional; legacy had this off)
+- `ConfirmLargeQuery` (optional; default off)
 
 ---
 

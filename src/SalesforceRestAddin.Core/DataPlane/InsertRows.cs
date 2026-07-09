@@ -110,6 +110,11 @@ public static class InsertRows
         {
             RecordsProcessed = records.Count,
             RowOutcomes = outcomes,
+            ErrorSummary = RowOutcomeErrorSummary.FromFailures(
+                outcomes,
+                input.Binding.Snapshot.StartRow,
+                "Insert",
+                records.Count),
         };
     }
 

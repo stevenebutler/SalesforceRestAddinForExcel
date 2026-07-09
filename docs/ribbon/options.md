@@ -1,7 +1,6 @@
 # Options
 
 **Ribbon:** `btnOptions` — “Options”  
-**Legacy:** `ForceConnector.OptionsForm()` → `frmOption`  
 **Login required:** No — ribbon button always available; clear-cache inside the dialog requires a live instance URL  
 **COM / VBA:** None
 
@@ -38,15 +37,15 @@ Map to [`ConnectorOptions`](../../src/SalesforceRestAddin.Core/Session/Connector
 
 ### FR-OPT-3 Settings (dropped)
 
-| Legacy UI | Status |
-|-----------|--------|
-| Not Use Managed Data (`GetManagedData`) | **Dropped** — translation-only; omit from new dialog |
+| Topic | Status |
+|-------|--------|
+| Managed / translation data toggle | **Dropped** — Translation Helper out of scope; omit from dialog |
 
 ### FR-OPT-4 Persistence
 
 - Load current values on open.
 - **OK** saves to JSON store (`SalesforceRestAddinDataPaths`); **Cancel** discards.
-- No registry (`RegDB` / `HKCU`) migration — JSON store only.
+- JSON store only (no Windows registry).
 
 ### FR-OPT-5 No side effects on save
 
@@ -90,11 +89,6 @@ Map to [`ConnectorOptions`](../../src/SalesforceRestAddin.Core/Session/Connector
 | `IncludeHiddenCells` | Update |
 
 ---
-
-## Legacy reference
-
-- `ForceConnector/frmOption.cs` / `Options.cs`
-- `ForceConnector/RegDB.cs`
 
 ## Implementation notes
 

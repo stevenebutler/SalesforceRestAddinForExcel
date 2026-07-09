@@ -13,7 +13,7 @@ Applies to **all** ribbon data operations and the six VBA COM methods. Individua
 
 ## Excel interop — mandatory patterns
 
-These replace legacy per-cell loops (`g_table.Cells[row, col]`, `foreach (Range c in row.Cells)`, etc.).
+Prefer bulk range I/O. Do **not** read or write worksheet data cell-by-cell in hot paths.
 
 ### Read path
 
@@ -24,9 +24,9 @@ These replace legacy per-cell loops (`g_table.Cells[row, col]`, `foreach (Range 
 ### Write path
 
 1. Build `object[,]` (or column-scoped arrays) in memory from Salesforce responses.
-2. Assign with **one** `Range.Value` per contiguous rectangle (see legacy `Operation.ApplyDataToRange` — port this pattern, not `formatWriteRow` per row).
-3. Apply **number formats** at **column** or **range** scope before or after the bulk value assign (legacy sets format twice around assignment for some types — preserve behavior, not the loop structure).
-4. After write: **AutoFit columns** for the written block (include the header row above the body when present so widths fit labels). **AutoFit rows**, then cap any row taller than **3×** `StandardHeight` (legacy long-text guard) — O(rows) clamp only; no per-cell height loops.
+2. Assign with **one** `Range.Value` per contiguous rectangle via `SheetProjectionWriter` (not per-row cell writes).
+3. Apply **number formats** at **column** or **range** scope before or after the bulk value assign.
+4. After write: **AutoFit columns** for the written block (include the header row above the body when present so widths fit labels). **AutoFit rows**, then cap any row taller than **3×** `StandardHeight` (long-text guard) — O(rows) clamp only; no per-cell height loops.
 5. Do not set comments, interior color, or validation **per cell** in the hot path. Batch error annotation where possible (see Error feedback).
 
 ### Formatting and derived display
@@ -44,34 +44,34 @@ Row height: AutoFit the written rows, then cap auto-expansion for long text at *
 
 Treat each property get/set on `Excel.Range` / `Excel.Worksheet` as expensive.
 
-| Operation | Legacy anti-pattern | Target |
-|-----------|---------------------|--------|
-| Query results | `formatWriteRow` per row | Single `object[,]` → one `Range.Value` |
-| Update (default, skip hidden) | Good: `todo.Value` bulk read + filter hidden indices | Keep |
-| Update (include hidden) | Same bulk read; no hidden filter | Keep |
-| Insert | Per-cell read in row loop | Read selected row slice as `object[,]` once per chunk |
-| Wizard draw | `drawField` per column | Batch header labels + defer comments or use a single metadata pass |
-| Describe output | Bulk `rng.Value` then per-cell comments | Bulk values only (comments out of scope) |
-| Error feedback | Per-failed-row comment + interior | Acceptable for **errors only** (small N); avoid on success path |
+| Operation | Target |
+|-----------|--------|
+| Query results | Single `object[,]` → one `Range.Value` |
+| Update (default, skip hidden) | `todo.Value` bulk read + filter hidden indices in memory |
+| Update (include hidden) | Same bulk read; no hidden filter |
+| Insert | Read selected row slice as `object[,]` once per chunk |
+| Wizard draw | Batch header labels + defer comments or use a single metadata pass |
+| Describe output | Bulk values only (comments out of scope) |
+| Error feedback | Acceptable for **errors only** (small N); avoid on success path |
 
 **Goal:** O(1) range reads and O(1) range writes per chunk per data plane, plus O(columns) format passes — not O(rows × columns) COM calls.
 
 ## Salesforce API — batching and limits
 
-| API | Endpoint (REST) | Salesforce limit | Legacy chunk | **Target** |
-|-----|-----------------|------------------|--------------|------------|
-| Query | `GET /services/data/vXX/query` | 2,000 rows/page | Paginate via `nextRecordsUrl` | Same; use Core pagination |
-| Retrieve | `POST .../composite/sobjects/{sObject}` | 2,000 ids | 50 | **Up to 200** (configurable, ≤ platform max) |
-| Create | `POST .../composite/sobjects` | 200 records | 50 | **Up to 200** |
-| Update | `PATCH .../composite/sobjects` | 200 records | 50 | **Up to 200** |
-| Delete | `DELETE .../composite/sobjects?ids=` | 200 ids | 50 | **Up to 200** |
+| API | Endpoint (REST) | Salesforce limit | **Target chunk** |
+|-----|-----------------|------------------|------------------|
+| Query | `GET /services/data/vXX/query` | 2,000 rows/page | Paginate via `nextRecordsUrl`; use Core pagination |
+| Retrieve | `POST .../composite/sobjects/{sObject}` | 2,000 ids | **Up to 200** (configurable, ≤ platform max) |
+| Create | `POST .../composite/sobjects` | 200 records | **Up to 200** |
+| Update | `PATCH .../composite/sobjects` | 200 records | **Up to 200** |
+| Delete | `DELETE .../composite/sobjects?ids=` | 200 ids | **Up to 200** |
 
 - Batch size should be **configurable** (`ConnectorOptions` or dedicated setting), defaulting to 200 where REST allows.
-- Send `Sforce-Auto-Assign: FALSE` on create/update when `AutoAssignRule` is false (legacy default). See [options.md](./options.md).
+- Send `Sforce-Auto-Assign: FALSE` on create/update when `AutoAssignRule` is false (product default). See [options.md](./options.md).
 
 ## Selection and table limits
 
-Legacy constants (overridable via `NoQueryLimit` where noted):
+Defaults (overridable via `NoQueryLimit` where noted):
 
 | Limit | Value | Applies to |
 |-------|-------|------------|
@@ -109,7 +109,7 @@ See [options.md](./options.md) FR-OPT-6 for the clear-cache UI.
 | Login gate | Data buttons require authenticated session (`SessionGate`); About and Options do not |
 | Excel thread | All worksheet mutations on Excel main thread (`ExcelAsyncUtil.QueueAsMacro`) |
 | Async I/O | HTTP to Salesforce off UI thread; marshal results back to macro queue for sheet writes |
-| Cancellation | Cooperative cancel between batches (legacy `BackgroundWorker`); no `Thread.Sleep` polling in tests |
+| Cancellation | Cooperative cancel between batches; no `Thread.Sleep` polling in tests |
 
 ## Excel STA async (NFR-STA-1)
 
@@ -151,15 +151,15 @@ Prefer recording errors in a Core result DTO; ExcelDna applies visuals in one pa
 
 ## Options cross-reference
 
-`ConnectorOptions` ([`src/SalesforceRestAddin.Core/Session/ConnectorOptions.cs`](../../src/SalesforceRestAddin.Core/Session/ConnectorOptions.cs)) replaces registry (`RegDB`). Flags affecting data plane:
+`ConnectorOptions` ([`src/SalesforceRestAddin.Core/Session/ConnectorOptions.cs`](../../src/SalesforceRestAddin.Core/Session/ConnectorOptions.cs)) persists to JSON (`JsonConnectorOptionsStore`). Flags affecting data plane:
 
-| Option | Legacy key | Effect |
-|--------|------------|--------|
-| `UseReference` | `UseReference` | Name ↔ Id for reference fields |
-| `NoWarning` | `NoWarn` | Skip optional confirmation dialogs (insert; include-hidden update) |
-| `NoQueryLimit` | `NoLimit` | Skip maxRows/maxCols checks |
-| `AutoAssignRule` | `AutoAssignRule` | When false, suppress auto-assignment header |
-| `IncludeHiddenCells` | `IncludeHiddenCells` | When false (default), update omits hidden rows/columns; when true, include them |
+| Option | Effect |
+|--------|--------|
+| `UseReference` | Name ↔ Id for reference fields |
+| `NoWarning` | Skip optional confirmation dialogs (insert; include-hidden update) |
+| `NoQueryLimit` | Skip maxRows/maxCols checks |
+| `AutoAssignRule` | When false, suppress auto-assignment header |
+| `IncludeHiddenCells` | When false (default), update omits hidden rows/columns; when true, include them |
 
 ## Testability
 
@@ -168,12 +168,11 @@ Prefer recording errors in a Core result DTO; ExcelDna applies visuals in one pa
 - Tests must be **deterministic** (no `Thread.Sleep`); see [AGENTS.md](../../AGENTS.md).
 - Architecture and test catalog: [design.md](./design.md), [test-cases.md](./test-cases.md).
 
-## Intentional legacy behaviors **not** to preserve
+## Intentionally out of scope / not used
 
-| Legacy | Replacement |
-|--------|-------------|
+| Topic | Product rule |
+|-------|--------------|
 | SOAP describe / logout | REST describe; OAuth session clear |
-| METAAPI / translation columns in Describe | Dropped |
-| `maxBatchSize = 50` under REST limits | Configurable up to 200 |
-| WinForms `processDatabase*` + `BackgroundWorker` | WPF progress + `QueueAsMacro` — see [ui-platform.md](./ui-platform.md) |
-| Per-reference-id SOQL in join mode | Batch `IN` queries (improvement — see [query-table-data.md](./query-table-data.md)) |
+| METAAPI / translation columns in Describe | Dropped — see [AGENTS.md](../../AGENTS.md) |
+| Composite batch size under REST limits | Configurable up to 200 (default 200) |
+| Per-reference-id SOQL in join mode | Batch `IN` queries — see [query-table-data.md](./query-table-data.md) |

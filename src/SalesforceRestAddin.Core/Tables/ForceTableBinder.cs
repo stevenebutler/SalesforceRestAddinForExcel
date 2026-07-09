@@ -65,14 +65,6 @@ public static class ForceTableBinder
                 Message = "No Id column found in the header row.",
             });
         }
-        else if (idColumnIndex != 0)
-        {
-            errors.Add(new BindingValidationError
-            {
-                Cell = new CellRef(2, idColumnIndex + 1),
-                Message = "Record Id must be the first field column (same column as the object name on row 1).",
-            });
-        }
 
         if (errors.Count > 0)
         {

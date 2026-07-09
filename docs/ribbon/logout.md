@@ -1,7 +1,6 @@
 # Logout
 
 **Ribbon:** `btnLogout` — “Logout”  
-**Legacy:** `ForceConnector.LogoutFrom()`  
 **Login required:** No — enabled when a **target instance** exists (committed auto-login prefs or live `InstanceUrl`)  
 **COM / VBA:** None
 
@@ -54,11 +53,9 @@ On Logout:
 
 ## Non-functional requirements
 
-### NFR-LO-1 No SOAP
+### NFR-LO-1 Session clear (no SOAP)
 
-**Legacy:** `soapClient.logout()` via WCF.
-
-**New:** Local session discard is sufficient; remote access tokens may remain valid until expiry. Refresh tokens stay in the OS credential store until overwritten by a later sign-in for that host.
+Local session discard is sufficient; remote access tokens may remain valid until expiry. Refresh tokens stay in the OS credential store until overwritten by a later sign-in for that host. No SOAP/WCF logout call.
 
 ### NFR-LO-2 Security
 
@@ -78,20 +75,15 @@ On Logout:
 
 ## Intentionally dropped
 
-| Legacy | Reason |
-|--------|--------|
-| SOAP logout call | SOAP stack removed |
-| Nulling `metaClient` | METAAPI dropped |
+| Topic | Reason |
+|-------|--------|
+| SOAP logout call | SOAP stack not used |
+| METAAPI client teardown | Translation Helper out of scope |
 | Deleting credential-store refresh token on Logout | User can switch orgs without re-authorizing the previous host |
 
 ---
 
-## Legacy reference
-
-- `ForceConnector/ForceConnector.cs` — `LogoutFrom()`
-- `ForceConnector/ThisAddIn.cs` — static clients
-
 ## Related
 
-- Login flows via `SessionGate` / `SessionLoginOrchestrator` (Phase 1).
+- Login flows via `SessionGate` / `SessionLoginOrchestrator`.
 - Successful login refreshes the group label (instance + display name) and enables Logout.

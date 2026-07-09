@@ -1,6 +1,6 @@
 # Ribbon button requirements
 
-Behavioral specifications for the **Force.com Connector** ribbon (legacy reference → Excel-DNA port). Each button has its own file; shared rules live in [common-performance-requirements.md](./common-performance-requirements.md) and UI policy in [ui-platform.md](./ui-platform.md).
+Behavioral specifications for the **Force Connector** ribbon (Excel-DNA + WPF). Each button has its own file; shared rules live in [common-performance-requirements.md](./common-performance-requirements.md) and UI policy in [ui-platform.md](./ui-platform.md).
 
 | Doc | Purpose |
 |-----|---------|
@@ -24,7 +24,7 @@ Behavioral specifications for the **Force.com Connector** ribbon (legacy referen
 | [Options](./options.md) | Connector toggles | 1–3 | — |
 | [Logout](./logout.md) | End session | 1 | — |
 
-**Out of scope:** the legacy **Translation Helper** ribbon group (`METAAPI.*` — eight buttons). See [AGENTS.md](../../AGENTS.md).
+**Out of scope:** Translation Helper / i18n metadata tooling (`METAAPI.*`). See [AGENTS.md](../../AGENTS.md).
 
 **Related but not a ribbon button:** `RefreshTableDataApi` reuses the query-selected-rows flow with `RefreshAll=true` (auto-select contiguous Id rows). Spec: [query-selected-rows.md](./query-selected-rows.md#refresh-table-data-com-api).
 
@@ -40,7 +40,7 @@ Row 3+: [Data rows]     — must include an Id column (15/18-char Salesforce Id,
 
 Object API name: comment on **A1**, or A1 value if no comment / no spaces.
 
-Discovery: `ActiveCell.CurrentRegion` (`Operation.setDataRanges`).
+Discovery: scan the header row left from the selection to the start of the contiguous header block; the object name is above that first column. Multi-table sheets separate tables with at least one blank column — see [query-table-data.md](./query-table-data.md) (FR-QTD-1).
 
 ## How to use these specs
 
@@ -51,7 +51,3 @@ Discovery: `ActiveCell.CurrentRegion` (`Operation.setDataRanges`).
 5. Implement **WPF** dialogs in `SalesforceRestAddin.Windows.Ui` — **C# only, no XAML** (see [ui-platform.md](./ui-platform.md)); WebView2 for OAuth only.
 6. Implement **ExcelDna** as a thin layer: bulk range read/write, `QueueAsMacro`.
 7. Wire ribbon and COM to the same `DataPlane` methods in `AddInHost`.
-
-Legacy entry points (behavior only — do not copy code):
-
-- `ForceConnector/ForceRibbon.cs` → `ForceConnector/ForceConnector.cs` → `Operation.*` / `TableWizard.*` / `DescribeCustomObject.*`

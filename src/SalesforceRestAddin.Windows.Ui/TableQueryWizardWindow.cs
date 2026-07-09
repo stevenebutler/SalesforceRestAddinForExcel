@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using SalesforceRestAddin.Core.DataPlane;
 using SalesforceRestAddin.Core.Rest;
 using SalesforceRestAddin.Core.Tables;
@@ -69,8 +70,8 @@ public sealed class TableQueryWizardWindow : Window
         _destinationLabel = FormatA1(anchorRow, anchorColumn);
 
         Title = "Table Query Wizard";
-        Width = 560;
-        Height = 460;
+        Width = 720;
+        Height = 480;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
         _content = new Grid { Margin = new Thickness(16) };
@@ -271,7 +272,48 @@ public sealed class TableQueryWizardWindow : Window
             }
         }
 
-        AddToGrid(_fieldList, contentStartRow + 1);
+        var legend = CreateLegendList();
+        var layout = new Grid();
+        layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        layout.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) });
+
+        var fieldColumn = new DockPanel { Margin = new Thickness(0, 0, 12, 0) };
+        fieldColumn.Children.Add(_fieldList);
+
+        var legendColumn = new DockPanel();
+        var legendTitle = new TextBlock
+        {
+            Text = "Legend",
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 8),
+        };
+        DockPanel.SetDock(legendTitle, Dock.Top);
+        legendColumn.Children.Add(legendTitle);
+        legendColumn.Children.Add(legend);
+
+        Grid.SetColumn(fieldColumn, 0);
+        Grid.SetColumn(legendColumn, 1);
+        layout.Children.Add(fieldColumn);
+        layout.Children.Add(legendColumn);
+
+        AddToGrid(layout, contentStartRow + 1);
+    }
+
+    private static ListBox CreateLegendList()
+    {
+        var list = UiListBox.Create();
+        list.ItemContainerStyle = UiListBox.CreateLegendItemStyle();
+        list.IsHitTestVisible = false;
+        list.Focusable = false;
+        list.BorderBrush = Brushes.Transparent;
+        list.Background = Brushes.Transparent;
+        UiListBox.MakeScrollable(list);
+        for (var bucket = 0; bucket < WizardTableLayoutBuilder.BucketCount; bucket++)
+        {
+            list.Items.Add(new LegendListItem(bucket));
+        }
+
+        return list;
     }
 
     private void OnFieldListSelectionChanged(object sender, SelectionChangedEventArgs e)

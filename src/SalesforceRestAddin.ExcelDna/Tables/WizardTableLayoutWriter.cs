@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using SalesforceRestAddin.Core.DataPlane;
 using SalesforceRestAddin.Core.Tables;
 using Microsoft.Office.Interop.Excel;
@@ -52,7 +53,10 @@ public static class WizardTableLayoutWriter
         var headerRow = startRow + 1;
         var headerStart = (Range)worksheet.Cells[headerRow, startColumn];
         var headerEnd = (Range)worksheet.Cells[headerRow, startColumn + fields.Count - 1];
-        worksheet.Range[headerStart, headerEnd].Value2 = labels;
+        var headerRange = worksheet.Range[headerStart, headerEnd];
+        headerRange.Value2 = labels;
+        headerRange.Font.Bold = true;
+        ApplyHeaderBucketFills(worksheet, headerRow, startColumn, fields);
 
         for (var i = 0; i < fields.Count; i++)
         {
@@ -65,6 +69,38 @@ public static class WizardTableLayoutWriter
         var separatorTop = (Range)worksheet.Cells[startRow, separatorColumn];
         var separatorBottom = (Range)worksheet.Cells[headerRow, separatorColumn];
         worksheet.Range[separatorTop, separatorBottom].Clear();
+    }
+
+    /// <summary>
+    /// Shades contiguous header runs by wizard field bucket (FR-TQW-6).
+    /// </summary>
+    private static void ApplyHeaderBucketFills(
+        Worksheet worksheet,
+        int headerRow,
+        int startColumn,
+        IReadOnlyList<FieldDescriptor> fields)
+    {
+        var runStart = 0;
+        var runBucket = WizardTableLayoutBuilder.GetFieldBucket(fields[0]);
+        for (var i = 1; i <= fields.Count; i++)
+        {
+            var bucket = i < fields.Count
+                ? WizardTableLayoutBuilder.GetFieldBucket(fields[i])
+                : -1;
+            if (bucket == runBucket)
+            {
+                continue;
+            }
+
+            var (r, g, b) = WizardTableLayoutBuilder.HeaderFillRgb(runBucket);
+            var runStartCell = (Range)worksheet.Cells[headerRow, startColumn + runStart];
+            var runEndCell = (Range)worksheet.Cells[headerRow, startColumn + i - 1];
+            worksheet.Range[runStartCell, runEndCell].Interior.Color =
+                ColorTranslator.ToOle(Color.FromArgb(r, g, b));
+
+            runStart = i;
+            runBucket = bucket;
+        }
     }
 
     private static void WriteCriteriaRow(

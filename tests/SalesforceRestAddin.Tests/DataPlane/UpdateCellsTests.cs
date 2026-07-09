@@ -223,4 +223,36 @@ public sealed class UpdateCellsTests
 
         await Assert.That(records.Count).IsEqualTo(3);
     }
+
+    [Test]
+    public async Task T_USC_05_Partial_Failure_Sets_ErrorSummary_For_Dialog()
+    {
+        var binding = ForceTableBinder.Bind(ForceTableSnapshots.ValidAccountTable(2), DescribeFixtures.LoadAccountDescribe()).Binding!;
+        var selection = new ForceTableSelection
+        {
+            BodyRowIndices = new[] { 0, 1 },
+            StartColumnIndex = 0,
+            EndColumnIndex = 2,
+        };
+        var (client, _) = SalesforceTestClients.Create(h =>
+        {
+            h.Enqueue(
+                System.Net.HttpStatusCode.OK,
+                """[{"id":"001000000000000","success":true,"errors":[]},{"id":"001000000000001","success":false,"errors":[{"statusCode":"FIELD_CUSTOM_VALIDATION_EXCEPTION","message":"Industry is locked","fields":["Industry"]}]}]""");
+        });
+
+        var result = await UpdateCells.RunAsync(client, new UpdateCellsInput
+        {
+            Binding = binding,
+            Selection = selection,
+        });
+
+        await Assert.That(result.RecordsProcessed).IsEqualTo(2);
+        await Assert.That(result.RowOutcomes.Count).IsEqualTo(1);
+        await Assert.That(result.RowOutcomes[0].Succeeded).IsFalse();
+        await Assert.That(result.ErrorSummary).IsNotNull();
+        await Assert.That(result.ErrorSummary!).Contains("Update failed for 1 of 2 row(s)");
+        await Assert.That(result.ErrorSummary!).Contains("Row 4:");
+        await Assert.That(result.ErrorSummary!).Contains("Industry is locked");
+    }
 }

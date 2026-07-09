@@ -1,7 +1,6 @@
 # About
 
 **Ribbon:** `btnAbout` — large button, Add-Ins tab  
-**Legacy:** `ForceRibbon.btnAbout_Click` → `ForceConnector.OpenAbout()`  
 **Login required:** No  
 **COM / VBA:** None
 
@@ -58,11 +57,6 @@ Display at minimum:
 - Standard WPF dialog patterns; keyboard dismiss.
 
 ---
-
-## Legacy reference
-
-- `ForceConnector/frmAbout.cs`
-- `ThisAddIn.Ver` for version string
 
 ## Out of scope
 

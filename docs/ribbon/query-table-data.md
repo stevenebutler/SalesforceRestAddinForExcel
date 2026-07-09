@@ -1,7 +1,6 @@
 # Query Table Data
 
 **Ribbon:** `btnQueryTable` — “Query Table Data”  
-**Legacy:** `ForceConnector.QueryTableData()` → `Operation.QueryData()`  
 **Login required:** Yes  
 **COM / VBA:** `QueryTableDataApi()` — same behavior
 
@@ -24,7 +23,7 @@ Parse WHERE criteria from **row 1**, run SOQL against the table’s object, pagi
    - **Multi-table sheets:** tables are separated by **at least one blank column** in the header row. From the selected cell, scan the header row **left** to the start of the contiguous non-blank header block (or column A). The object name is in the cell **above that first column**. If that cell has no valid entity name, **abort** with an error citing the cell address.
    - Object name in the row 1 anchor cell (API name in comment, or value when no comment).
    - Headers in row 2 of the same column span.
-   - **Record Id** (Salesforce primary key from describe metadata) is **required** and must be the **first field column** — same column index as the row 1 object cell.
+   - **Record Id** (Salesforce primary key from describe metadata) is **required** somewhere in the row-2 header block. The wizard places it first (aligned with the row 1 object cell); other column positions are allowed if Id is present and resolvable.
    - Field headers resolve to API names via **describe metadata** (`FieldCatalog`): prefer row-2 comment `API Name: …`, then field label match, then API-name fallback.
 3. Query results, clears, Id write-back, and error notes/colour apply only within that table’s column range (never from sheet column A unless the table starts there).
 
@@ -68,14 +67,14 @@ Starting column B, read repeating triplets: `[field label or API] | [operator] |
   - **Accept:** Excel native date/datetime cells (OADate / `DateTime` via `Value2`); ISO strings (`yyyy-MM-dd` or `yyyy-MM-dd[T| ]HH:mm:ss…`); relative SOQL literals (`TODAY`, `LAST_N_DAYS`, …).
   - **Reject:** locale-formatted text (e.g. `26/07/2021`, `7/9/2026`) — abort with a validation error citing the criteria cell. Do not call `Evaluate("DATEVALUE")` or guess culture.
 
-**Validation errors** must cite the offending cell address (legacy `statusText`).
+**Validation errors** must cite the offending cell address.
 
 ### FR-QTD-4 Reference join mode (`in` / `on` on reference field)
 
-- `in` + reference: build Id list from range reference in value cell (e.g. sheet column of Ids).
-- `on`: **one row per reference Id** — legacy runs **one SOQL per Id** (documented anti-pattern).
+- `in` + reference: build Id list from the value cell (see [bugs.md](../bugs.md) #9 for open product questions on range vs comma-separated Ids).
+- `on`: one result row per reference Id.
 
-**Improvement (recommended):** batch with `WHERE ref IN (...)` within Salesforce limits; spec legacy parity as fallback only if batching changes results.
+**Required approach:** batch with `WHERE ref IN (...)` within Salesforce limits (not one HTTP query per Id).
 
 ### FR-QTD-5 SELECT list
 
@@ -99,13 +98,13 @@ Independent of `NoWarning` (which gates insert / include-hidden update confirms)
 
 ### FR-QTD-8 Write results
 
-- Bulk write via `ApplyDataToRange` pattern ([common](./common-performance-requirements.md)).
+- Bulk write via the shared projection pattern ([common](./common-performance-requirements.md)).
 - **Zero rows:** write `#N/F` in first body cell of Id column.
 - **Error mid-run:** `#Err` in current row Id cell; surface exception message.
 
 ### FR-QTD-9 Cancel
 
-- Stop fetching next pages; leave partial results or roll back per product decision (legacy keeps partial writes).
+- Stop fetching next pages; leave partial results already written (do not roll back prior pages).
 
 ---
 
@@ -124,10 +123,10 @@ Independent of `NoWarning` (which gates insert / include-hidden update confirms)
 
 ### NFR-QTD-3 Join mode batching
 
-| Approach | COM/API cost |
-|----------|----------------|
-| Legacy: 1 query × M reference Ids | M HTTP round-trips |
-| Target: batched IN clauses | ⌈M / limit⌉ round-trips |
+| Approach | API cost |
+|----------|----------|
+| One query per reference Id | M HTTP round-trips — **do not use** |
+| Batched `IN` clauses | ⌈M / limit⌉ round-trips — **required** |
 
 ### NFR-QTD-4 Memory (**deprecated**)
 
@@ -151,12 +150,6 @@ Independent of `NoWarning` (which gates insert / include-hidden update confirms)
 | `GET .../query` (COUNT) | Optional confirmation |
 
 ---
-
-## Legacy reference
-
-- `ForceConnector/processDatabaseQueryTable.cs`
-- `Operation.BuildQueryString`, `Operation.queryDataDraw`
-- Constants: `NOT_FOUND = "#N/F"`
 
 ## Wizard integration
 

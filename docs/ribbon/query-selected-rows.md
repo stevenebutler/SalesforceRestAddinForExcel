@@ -1,7 +1,6 @@
 # Query Selected Rows
 
 **Ribbon:** `btnQueryRows` — “Query Selected Rows”  
-**Legacy:** `ForceConnector.QuerySelectedRows()` → `Operation.QueryRows()`  
 **Login required:** Yes  
 **COM / VBA:** `QuerySelectedRowsApi()` — same behavior
 
@@ -20,18 +19,18 @@ Retrieve current field values from Salesforce for **selected table rows** by Id,
 ### FR-QSR-1 Preconditions
 
 1. Authenticated session.
-2. Valid ForceConnector table (`setDataRanges`).
+2. Valid ForceConnector table.
 3. Selection intersects body rows with valid Ids in Id column (15/18-char; not `New`).
 4. Unless `NoQueryLimit`: selected rows ≤ **3,500**.
 
 ### FR-QSR-2 Field set
 
 - Query **all** non-Id columns mapped in row 2 (`headerFields`).
-- Write path skips overwriting Id column in sheet (legacy `ApplyDataToRange` with `skipColumn`). Ids from the selection are used only for retrieve requests and row alignment.
+- Write path skips overwriting Id column in sheet. Ids from the selection are used only for retrieve requests and row alignment.
 
 ### FR-QSR-3 Confirmation
 
-- No count dialog before retrieve (legacy `RequireConfirmation` was false).
+- No count dialog before retrieve.
 
 ### FR-QSR-4 Retrieve
 
@@ -42,7 +41,7 @@ Retrieve current field values from Salesforce for **selected table rows** by Id,
 ### FR-QSR-5 Write results
 
 - Map records to row order of selection.
-- Missing record / bad Id: legacy commented code grayed Id font; current path relies on retrieve response alignment — preserve “no silent wrong row” behavior.
+- Missing record / bad Id: rely on retrieve response alignment — preserve “no silent wrong row” behavior.
 - Apply reference display names when `UseReference` (`IdToName`).
 
 ### FR-QSR-6 Progress and cancel
@@ -65,8 +64,6 @@ Retrieve current field values from Salesforce for **selected table rows** by Id,
 
 ### NFR-QSR-1 Bulk write (reference implementation)
 
-Legacy `Operation.ApplyDataToRange`:
-
 1. Build `object[recordCount, fieldCount]` in memory.
 2. Flatten compound types (address, location) to strings in Core.
 3. **Single** `Range.Value` assign to body rectangle.
@@ -75,7 +72,7 @@ Legacy `Operation.ApplyDataToRange`:
 
 ### NFR-QSR-2 Bulk Id read
 
-- Read Id cells for chunk via one `Intersect(g_ids, todo)` → `Value` array (legacy `objectids`).
+- Read Id cells for chunk via one range intersection → `Value` array.
 
 ### NFR-QSR-3 Formatting
 
@@ -97,15 +94,3 @@ Legacy `Operation.ApplyDataToRange`:
 |------|---------|
 | Describe sobject | Table metadata |
 | `POST .../composite/sobjects/{type}` | Retrieve by ids |
-
----
-
-## Legacy reference
-
-- `ForceConnector/processDatabaseQuerySelectedRows.cs`
-- `Operation.querySelectedRow`, `Operation.ApplyDataToRange`
-- `Operation.RefreshData` entry for COM refresh
-
-## Deprecated legacy path
-
-- Per-row `formatWriteRow` loop is commented out in favor of `ApplyDataToRange` — do not resurrect.

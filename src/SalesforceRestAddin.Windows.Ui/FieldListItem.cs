@@ -1,21 +1,23 @@
-using System.Collections.Generic;
 using System.Text;
+using System.Windows.Media;
 using SalesforceRestAddin.Core.DataPlane;
 using SalesforceRestAddin.Core.Tables;
 
 namespace SalesforceRestAddin.Windows.Ui;
 
 /// <summary>
-/// Wizard field-picker row: label + API name + flags; custom rows use a darker background.
+/// Wizard field-picker row: label + API name; row fill from the shared eight-bucket palette.
 /// </summary>
 internal sealed class FieldListItem
 {
     public FieldListItem(FieldDescriptor field)
     {
         Field = field;
-        DisplayText = FormatDisplay(field);
+        DisplayText = WizardTableLayoutBuilder.FormatFieldListDisplay(field);
         ToolTipText = FormatToolTip(field);
-        IsCustom = WizardTableLayoutBuilder.IsCustomField(field);
+        var (r, g, b) = WizardTableLayoutBuilder.HeaderFillRgb(WizardTableLayoutBuilder.GetFieldBucket(field));
+        RowBackground = new SolidColorBrush(Color.FromRgb(r, g, b));
+        RowBackground.Freeze();
     }
 
     public FieldDescriptor Field { get; }
@@ -24,42 +26,9 @@ internal sealed class FieldListItem
 
     public string ToolTipText { get; }
 
-    public bool IsCustom { get; }
+    public Brush RowBackground { get; }
 
     public override string ToString() => DisplayText;
-
-    internal static string FormatDisplay(FieldDescriptor field)
-    {
-        var flags = new List<string>();
-        if (WizardTableLayoutBuilder.IsRequiredOnCreate(field))
-        {
-            flags.Add("req");
-        }
-
-        if (!field.Updateable)
-        {
-            flags.Add("ro");
-        }
-
-        if (field.IsReference)
-        {
-            flags.Add("lk");
-        }
-
-        var text = new StringBuilder();
-        text.Append(field.Label);
-        text.Append(" (");
-        text.Append(field.Name);
-        text.Append(')');
-        foreach (var flag in flags)
-        {
-            text.Append(" [");
-            text.Append(flag);
-            text.Append(']');
-        }
-
-        return text.ToString();
-    }
 
     internal static string FormatToolTip(FieldDescriptor field)
     {

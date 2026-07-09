@@ -17,16 +17,16 @@ Set GetForceAutomationObject = addIn.Object
 Preserve:
 
 - **ProgId:** `ForceConnector.NextGen`
-- **COM API class GUIDs** in `ComApiIdentity` (must match legacy `SalesForceAddInApi`)
+- **COM API class GUIDs** in `ComApiIdentity` (must stay stable for existing `ConnectorAdaptor` / VBA macros)
 - **Six COM methods:** `QuerySelectedRowsApi`, `QueryTableDataApi`, `UpdateSelectedCellsApi`, `InsertSelectedRowsApi`, `DeleteSelectedRecordsApi`, `RefreshTableDataApi`
 
 ### Worksheet table invariants
 
 Every connector table on a worksheet must satisfy:
 
-1. **Row 1 anchor cell** — object **label** (display) with the object **API name** in the cell comment.
-2. **Row 2 same column** — the Salesforce **Record Id** field (primary key from describe metadata). Id is **always present** and is **always the first field column** (aligned with the row 1 object cell).
-3. **Remaining row 2 cells** — other selected fields (wizard order: Id → required → Name → standard → custom → read-only).
+1. **Row 1 anchor cell** — object **label** (display) with the object **API name** in the cell comment (above the first field column of the table).
+2. **Row 2** — field headers for the table. **Record Id** (Salesforce primary key from describe metadata) is **always present** somewhere in that header block. The Table Query Wizard places Id first (aligned with the row 1 object cell); existing sheets may put Id in another column and still bind.
+3. **Other row 2 cells** — remaining selected fields (wizard order: Id → Name → Required (standard/custom) → Standard → Custom → Read-only (standard/custom)).
 4. **Field mapping** — header labels and criteria fields resolve to API names via **describe metadata** (`FieldCatalog`), not ad-hoc string guessing. Prefer row-2 comment `API Name: …`, then label match, then API-name fallback.
 5. **Multi-table sheets** — tables are separated by **at least one blank column** in the header row. Discovery scans left from the selection to the start of the contiguous header block; the object name is above that first column. Writes, Id write-back, and error styling stay within that column span.
 
@@ -140,11 +140,45 @@ In `SalesforceRestAddin.ExcelDna-AddIn.dna`:
 - **Zero warnings** — `TreatWarningsAsErrors` is on
 - **Tests must be deterministic** — no `Thread.Sleep` / timing coordination; use orchestration (`SequentialMockHttpHandler`, fakes, `await`)
 
+## Unit tests (TUnit)
+
+Tests are **TUnit** on `net10.0` via `./dev.sh test` (container entrypoint already inserts `--` before args passed to the test app). Prefer the full suite after Core changes; filter only when iterating on a known class.
+
+### Do / don't
+
+```bash
+# Good — full suite
+./dev.sh test
+
+# Good — list method names (discover filters)
+./dev.sh test --list-tests
+
+# Good — filter by class (treenode path; ** only on the final segment)
+./dev.sh test --treenode-filter '/*/SalesforceRestAddin.Tests/*/WizardTableLayoutBuilderTests/*'
+
+# Bad — extra `--` is forwarded to TUnit → "Unexpected argument --"
+./dev.sh test -- --filter SessionContext
+
+# Bad — VSTest-style `--filter` is not a TUnit option
+./dev.sh test --filter SessionContext
+
+# Bad — `**` before the last path segment → ArgumentException
+./dev.sh test --treenode-filter '/**/WizardTableLayoutBuilderTests/**'
+```
+
+### Filter tips
+
+1. Prefer `--list-tests` first, then build a `--treenode-filter` from the printed names / namespaces.
+2. Typical shape: `/*/AssemblyName/NamespaceSegment/ClassName/*` (wildcards for assembly/namespace segments that vary).
+3. Exit code **8** with `Zero tests ran` usually means the treenode filter matched nothing — fix the path, don't assume the suite failed.
+4. Assertions on `(byte R, byte G, byte B)`: compare with `((byte)…, (byte)…, (byte)…)` — bare `(189, 215, 238)` is `(int,int,int)` and TUnit will throw on implicit conversion.
+
 ## Quick commands
 
 ```bash
 ./dev.sh build
 ./dev.sh test
-./dev.sh test -- --filter SessionContext
+./dev.sh test --list-tests
+./dev.sh test --treenode-filter '/*/SalesforceRestAddin.Tests/*/WizardTableLayoutBuilderTests/*'
 FC_SKIP_EXCELDNA_BUILD=1 ./dev.sh build
 ```

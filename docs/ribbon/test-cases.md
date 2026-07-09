@@ -30,7 +30,7 @@ Status column left blank for implementation tracking.
 | T-TBL-06 | FR-QTD-1 | No Id column in headers → validation error | Unit |
 | T-TBL-07 | common | `HiddenRowIndices` excluded from update payload by default (`IncludeHiddenCells` false) | Unit |
 | T-TBL-08 | common | `HiddenColumnIndices` excluded from update payload | Unit |
-| T-TBL-09 | FR-QTD-1 | Id present but not first field column → validation error | Unit |
+| T-TBL-09 | FR-QTD-1 | Id present but not first field column → binding succeeds with that `IdColumnIndex` | Unit |
 | T-TBL-10 | FR-QTD-1 | Header left-scan finds table start after blank gap | Unit |
 | T-TBL-11 | FR-QTD-1 | Active cell in left block resolves left table bounds | Unit |
 | T-TBL-12 | FR-QTD-1 | No header at selection → resolve error | Unit |
@@ -80,7 +80,7 @@ Status column left blank for implementation tracking.
 
 | ID | Req | Test | Tag |
 |----|-----|------|-----|
-| T-VAL-01 | common | Empty cell → JSON `null` on update/create (legacy parity; create omits nulls) | Unit |
+| T-VAL-01 | common | Empty cell → JSON `null` on update/create (create omits nulls) | Unit |
 | T-VAL-02 | common | Date cell → ISO date in Salesforce payload | Unit |
 | T-VAL-03 | common | Date/datetime display → preserves Excel-friendly value (not trimmed to broken text) | Unit |
 | T-VAL-04 | options | Reference with `UseReference`: name → Id via resolver | Unit |
@@ -155,7 +155,7 @@ Status column left blank for implementation tracking.
 | T-USC-02 | FR-USC-4 | No updateable columns → error, no HTTP | Unit |
 | T-USC-03 | FR-USC-5 | `AutoAssignRule=false` → `Sforce-Auto-Assign: FALSE` header | HTTP |
 | T-USC-04 | FR-USC-5 | `AutoAssignRule=true` → header absent | HTTP |
-| T-USC-05 | FR-USC-7 | Partial failure → `RowOutcome` with SF error messages | HTTP |
+| T-USC-05 | FR-USC-7 | Partial failure → `RowOutcome` + `ErrorSummary` for dialog | HTTP |
 | T-USC-06 | FR-USC-2 | Default: hidden row in selection omitted from PATCH | Unit |
 | T-USC-07 | FR-USC-2 | Default: hidden column omitted from PATCH | Unit |
 | T-USC-08 | NFR-USC-1 | Standard path builds records from 2D array without per-cell API | Unit |
@@ -173,6 +173,7 @@ Status column left blank for implementation tracking.
 | T-ISR-01 | FR-ISR-3 | Rows `New`, `new`, `NEW` included; `Acme` skipped | Unit |
 | T-ISR-02 | FR-ISR-4 | Empty createable set for row → batch error message | Unit |
 | T-ISR-03 | FR-ISR-5 | Success → `IdWriteback` on row outcome | HTTP |
+| T-ISR-03b | FR-ISR-7 | Partial/create failure → `RowOutcomes` + `ErrorSummary` for dialog | HTTP |
 | T-ISR-04 | FR-ISR-5 | No eligible rows → error, no HTTP | Unit |
 | T-ISR-05 | FR-ISR-1 | 3501 rows selected → rejected (no NoQueryLimit) | Unit |
 | T-ISR-06 | NFR-ISR-1 | Records built from body array slice in one pass | Unit |
@@ -185,7 +186,7 @@ Status column left blank for implementation tracking.
 |----|-----|------|-----|
 | T-DR-01 | FR-DR-4 | DELETE URL contains all ids in batch | HTTP |
 | T-DR-02 | FR-DR-5 | Success → `IdDisplayOverride == "deleted"` | Unit |
-| T-DR-03 | FR-DR-5 | Failure → row outcome with errors | HTTP |
+| T-DR-03 | FR-DR-5 | Failure → row outcome + `ErrorSummary` for dialog | HTTP |
 | T-DR-04 | FR-DR-3 | Id from Id column index, not hardcoded column A | Unit |
 | T-DR-05 | FR-DR-6 | Cancel between batches → remaining batches skipped | HTTP |
 
@@ -228,7 +229,7 @@ Status column left blank for implementation tracking.
 | ID | Req | Test | Tag |
 |----|-----|------|-----|
 | T-OPT-01 | FR-OPT-4 | Round-trip JSON store (existing `JsonConnectorOptionsStoreTests`) | Unit |
-| T-OPT-02 | FR-OPT-2 | Defaults match legacy RegDB absent keys | Unit |
+| T-OPT-02 | FR-OPT-2 | Defaults match `ConnectorOptions` product defaults when store has no keys | Unit |
 | T-OPT-03 | design | `CompositeBatchSize` persisted and used by `RecordBatchSplitter` | Unit |
 
 ---
@@ -248,9 +249,10 @@ Status column left blank for implementation tracking.
 
 | ID | Req | Test | Tag |
 |----|-----|------|-----|
-| T-WIZ-01 | FR-TQW-6 | Field order: Id, required, name, standard, custom, read-only | Unit |
+| T-WIZ-01 | FR-TQW-6 | Field order: Id, Name, required (std/custom), standard, custom, read-only (std/custom); describe index within bucket | Unit |
 | T-WIZ-02 | FR-TQW-5 | Default clause when none → equivalent WHERE plan | Unit |
 | T-WIZ-03 | FR-TQW-7 | Wizard completion calls same `QueryTable.Run` as ribbon | Unit |
+| T-WIZ-04 | FR-TQW-6 | Eight distinct header fills; Name before Required; `nameField` parse; display text without flags | Unit |
 
 ---
 
@@ -299,7 +301,7 @@ SalesforceRestAddin.Tests/
 
 - Translation Helper ribbon (8 buttons)
 - SOAP describe/logout
-- Per-cell legacy loops (ensure **absent** in new code via review, not runtime test)
+- Per-cell Excel COM loops in hot paths (ensure **absent** via review, not runtime test)
 
 ---
 

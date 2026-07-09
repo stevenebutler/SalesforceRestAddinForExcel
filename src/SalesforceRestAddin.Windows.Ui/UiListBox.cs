@@ -7,9 +7,6 @@ namespace SalesforceRestAddin.Windows.Ui;
 
 internal static class UiListBox
 {
-    private static readonly SolidColorBrush CustomFieldRowBrush =
-        CreateFrozenBrush(0xD8, 0xD8, 0xD8);
-
     public static ListBox Create(SelectionMode selectionMode = SelectionMode.Single)
     {
         return new ListBox
@@ -35,7 +32,7 @@ internal static class UiListBox
     }
 
     /// <summary>
-    /// Field picker: tooltip = Salesforce type; custom fields get a darker row background.
+    /// Field picker: tooltip = Salesforce type; row background from bucket fill.
     /// </summary>
     public static Style CreateFieldPickerItemStyle()
     {
@@ -43,21 +40,23 @@ internal static class UiListBox
         style.Setters.Add(new Setter(
             FrameworkElement.ToolTipProperty,
             new Binding(nameof(FieldListItem.ToolTipText))));
-
-        var customTrigger = new DataTrigger
-        {
-            Binding = new Binding(nameof(FieldListItem.IsCustom)),
-            Value = true,
-        };
-        customTrigger.Setters.Add(new Setter(Control.BackgroundProperty, CustomFieldRowBrush));
-        style.Triggers.Add(customTrigger);
+        style.Setters.Add(new Setter(
+            Control.BackgroundProperty,
+            new Binding(nameof(FieldListItem.RowBackground))));
         return style;
     }
 
-    private static SolidColorBrush CreateFrozenBrush(byte r, byte g, byte b)
+    /// <summary>
+    /// Legend rows: same bucket fills; display-only (not selectable / not hit-testable).
+    /// </summary>
+    public static Style CreateLegendItemStyle()
     {
-        var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
-        brush.Freeze();
-        return brush;
+        var style = CreatePaddedItemStyle();
+        style.Setters.Add(new Setter(
+            Control.BackgroundProperty,
+            new Binding(nameof(LegendListItem.RowBackground))));
+        style.Setters.Add(new Setter(UIElement.IsHitTestVisibleProperty, false));
+        style.Setters.Add(new Setter(UIElement.FocusableProperty, false));
+        return style;
     }
 }

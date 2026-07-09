@@ -351,7 +351,8 @@ public static class AddInHost
 
         if (confirmDelete && !ConfirmationDialogWindow.Show(
                 AddInTitle,
-                $"Delete {selection.BodyRowIndices.Count} record(s) from {binding.Describe.Label}? This cannot be undone."))
+                FormatRecordCountConfirm("Delete", selection.BodyRowIndices.Count, "from", binding.Describe.Label)
+                    + " This cannot be undone."))
         {
             return;
         }
@@ -367,7 +368,7 @@ public static class AddInHost
         // Insert confirm unless NoWarning (FR-ISR-2); N = selected rows, not "New" count.
         if (confirmInsert && !options.NoWarning && !ConfirmationDialogWindow.Show(
                 AddInTitle,
-                $"You try to insert {selection.BodyRowIndices.Count} records. Are you sure?"))
+                FormatRecordCountConfirm("Insert", selection.BodyRowIndices.Count, "into", binding.Describe.Label)))
         {
             return;
         }
@@ -585,6 +586,12 @@ public static class AddInHost
             IsMultiArea = isMultiArea,
             ColumnsByBodyRow = map,
         };
+    }
+
+    private static string FormatRecordCountConfirm(string verb, int count, string preposition, string objectLabel)
+    {
+        var noun = count == 1 ? "record" : "records";
+        return $"{verb} {count} {noun} {preposition} {objectLabel}?";
     }
 
     private static int PromptAnchorCell(ExcelApplication excel, int defaultRow, int defaultColumn)

@@ -17,7 +17,7 @@ public static class ForceTableParser
                         Cell = new CellRef(startRow, startColumn),
                         Message =
                             $"Could not locate an object name in cell {address}. " +
-                            "The entity name must appear above the first (Id) column of the table.",
+                            "The entity name must appear above the first field column of the table.",
                     },
                 ],
             };

@@ -1,7 +1,6 @@
 # Update Selected Cells
 
 **Ribbon:** `btnUpdateCells` — “Update Selected Cells”  
-**Legacy:** `ForceConnector.UpdateSelectedCells()` → `Operation.UpdateCells()`  
 **Login required:** Yes  
 **COM / VBA:** `UpdateSelectedCellsApi()` — same behavior
 
@@ -20,7 +19,7 @@ PATCH selected data cells in a ForceConnector table to Salesforce. Reads Ids fro
 ### FR-USC-1 Preconditions
 
 1. Authenticated session.
-2. Active cell lies within a valid ForceConnector table (`setDataRanges` equivalent).
+2. Active cell lies within a valid ForceConnector table.
 3. Table has mappable **Id** column in row 2.
 4. User selection intersects table **body** (row 3+).
 5. Selection may be **multi-area** (Ctrl+select) **within a single ForceConnector table**. Each body row’s PATCH includes only columns selected on that row (union if overlapping areas hit the same row). If any selected cell falls outside the captured table (including another entity’s columns), **abort** before HTTP with a clear error. Multi-entity updates in one operation are not supported.
@@ -47,8 +46,8 @@ For each selected row in chunk:
 - **Id:** from Id column (normalize 15 → 18 char).
 - **Fields:** only columns where describe says `updateable == true`, and only columns **selected on that row** (per-row field sets for multi-area).
 - **Skip** Id field in body; include `attributes.type`.
-- Coerce cell values via field type (`Util.toSalesforceType` behavior): dates, references (`NameToId` when `UseReference`), picklists, etc.
-- **Empty / cleared cells** → JSON `null` for all field types (legacy parity). Included in the PATCH body so Salesforce clears the field. May revisit string `""` vs `null` after sandbox testing.
+- Coerce cell values via field type: dates, references (`NameToId` when `UseReference`), picklists, etc.
+- **Empty / cleared cells** → JSON `null` for all field types. Included in the PATCH body so Salesforce clears the field. May revisit string `""` vs `null` after sandbox testing.
 - Cell values come from the **bulk-captured** table `Body` array (one Excel read); selection supplies indices only.
 - If no updateable columns in selection → cancel with *“No updatable columns selected”*.
 
@@ -68,10 +67,9 @@ For each selected row in chunk:
 
 | Outcome | Sheet effect |
 |---------|----------------|
-| Success | Clear error styling on row (legacy pre-clears chunk) |
-| Row failure | Row interior warning color; comment on first selected cell in row with SF `errors[]` |
-| Partial batch failure | Continue other rows; set `someFailed` for summary |
-| All failed | Error summary dialog if confirmations enabled |
+| Success | Clear error styling on row |
+| Row failure | Row interior warning color; Id cell comment with SF `errors[]` |
+| Partial / all failed | Continue other rows; `ErrorDialogWindow` with per-row SF errors (same text as comments) |
 
 ### FR-USC-8 Status bar
 
@@ -84,7 +82,7 @@ For each selected row in chunk:
 
 ### NFR-USC-1 Bulk read (standard path)
 
-- **Must** read `todo.Value` as `object[,]` once per chunk (legacy `updateRange` — good pattern).
+- **Must** read selection/chunk values as `object[,]` once per chunk.
 - Map array indices to field metadata in managed code.
 
 ### NFR-USC-2 Bulk read (hidden-row filtering)
@@ -111,16 +109,3 @@ Hidden state is captured once with the table snapshot (`HiddenRowIndices` / `Hid
 |------|---------|
 | `GET .../sobjects/{type}/describe` | Field metadata (on table setup) |
 | `PATCH .../composite/sobjects` | Update records |
-
----
-
-## Legacy reference
-
-- `ForceConnector/processDatabaseUpdateRows.cs`
-- `ForceConnector/processDatabaseUpdateRowsNew.cs`
-- `Operation.updateRange`, `Operation.updateResultHandler`, `Operation.UpdateLimitCheck`
-
-## Known legacy quirks
-
-- `RequireConfirmation` is never true in shipping code; bulk warning path is dead.
-- Default update omits AutoFilter/manually hidden rows and columns; enable **Include Hidden Columns/Rows** to send them.
