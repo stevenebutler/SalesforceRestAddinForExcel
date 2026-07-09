@@ -19,19 +19,20 @@ Shows a modal **About** dialog with product name, version, attribution, and an e
 
 ### FR-AB-1 Trigger
 
-- User clicks **About** on the ForceConnector ribbon group.
+- User clicks **About** on the ribbon group.
 - Handler runs immediately; no session check.
 
 ### FR-AB-2 Dialog content
 
 Display at minimum:
 
-| Element | Legacy source | Status |
-|---------|---------------|--------|
-| Product title | “Salesforce REST Add-in for Excel” | Implemented |
-| Version | Build/add-in version string | Implemented |
-| Author / copyright | Attribution labels | **Pending** |
-| Link | GitHub or project URL (optional, user-opened in browser) | **Pending** |
+| Element | Content | Status |
+|---------|---------|--------|
+| Product title | `ProductBranding.ProductName` | Implemented |
+| Tagline | GitHub / product description | Implemented |
+| Version | Build/add-in commit id | Implemented |
+| Author / copyright | Steven Butler / © 2026 | Implemented |
+| Link | https://github.com/stevenebutler/SalesforceRestAddinForExcel (opens in browser) | Implemented |
 
 ### FR-AB-3 Dismissal
 

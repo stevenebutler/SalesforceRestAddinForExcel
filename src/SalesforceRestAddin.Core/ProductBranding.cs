@@ -11,4 +11,13 @@ public static class ProductBranding
     public const string ShortName = "SalesforceRestAddin";
 
     public const string Tagline = "Bring Salesforce into Excel with REST with native OAUTH Login support";
+
+    public const string Author = "Steven Butler";
+
+    public const string Copyright = "Copyright © 2026 Steven Butler";
+
+    /// <summary>Public GitHub repository (develop branch is the active development line).</summary>
+    public const string RepositoryUrl = "https://github.com/stevenebutler/SalesforceRestAddinForExcel";
+
+    public const string RepositoryDisplayName = "stevenebutler/SalesforceRestAddinForExcel";
 }
