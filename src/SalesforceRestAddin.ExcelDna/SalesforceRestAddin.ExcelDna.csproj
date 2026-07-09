@@ -38,6 +38,7 @@
 
   <ItemGroup>
     <None Include="SalesforceRestAddin.ExcelDna-AddIn.dna" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Images\about.png" CopyToOutputDirectory="PreserveNewest" />
     <EmbeddedResource Include="SalesforceRestAddinRibbon.xml" />
   </ItemGroup>
 

@@ -10,7 +10,7 @@ public static class ProductBranding
     /// <summary>Short identifier for AppData folder, deploy bundle, and credential targets.</summary>
     public const string ShortName = "SalesforceRestAddin";
 
-    public const string Tagline = "Bring Salesforce into Excel with REST with native OAUTH Login support";
+    public const string Tagline = "Bring Salesforce into Excel with REST and native OAuth Login support";
 
     public const string Author = "Steven Butler";
 

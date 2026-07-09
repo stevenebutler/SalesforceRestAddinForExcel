@@ -19,7 +19,7 @@ Shows a modal **About** dialog with product name, version, attribution, and an e
 
 ### FR-AB-1 Trigger
 
-- User clicks **About** on the ribbon group.
+- User clicks **About** on the ribbon group (custom large icon: teal cloud + worksheet motif — original artwork, not Salesforce branding).
 - Handler runs immediately; no session check.
 
 ### FR-AB-2 Dialog content

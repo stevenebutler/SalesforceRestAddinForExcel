@@ -1,6 +1,6 @@
 # Salesforce REST Add-in for Excel
 
-Bring Salesforce into Excel with REST with native OAUTH Login support.
+Bring Salesforce into Excel with REST and native OAuth Login support.
 
 Excel-DNA add-in for querying, updating, inserting, and deleting Salesforce records from worksheets. OAuth login (PKCE public client), REST describe/query/composite CRUD, and VBA automation via ProgId `ForceConnector.NextGen` for existing `ConnectorAdaptor` macros.
 

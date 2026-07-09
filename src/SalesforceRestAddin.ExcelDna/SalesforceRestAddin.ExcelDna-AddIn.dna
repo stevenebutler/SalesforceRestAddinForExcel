@@ -16,4 +16,6 @@
   <!-- WebView2 managed assemblies (OAuth); native WebView2Loader.dll is embedded in Windows.Ui -->
   <Reference Path="Microsoft.Web.WebView2.Core.dll" LoadFromBytes="true" Pack="true" IncludePdb="false" />
   <Reference Path="Microsoft.Web.WebView2.Wpf.dll" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+  <!-- Ribbon images (Office loadImage callback via ExcelRibbon.LoadImage) -->
+  <Image Name="about" Path="Images/about.png" Pack="true" />
 </DnaLibrary>

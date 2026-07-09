@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui" onLoad="OnRibbonLoad">
+<customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui" onLoad="OnRibbonLoad" loadImage="LoadImage">
   <ribbon>
     <tabs>
       <tab id="tabSalesforceRest" label="Salesforce Rest">
         <group id="grpSalesforceRest" getLabel="GetConnectorGroupLabel">
-          <button id="btnAbout" label="About" size="large" onAction="OnAbout" />
+          <button id="btnAbout" label="About" size="large" image="about" onAction="OnAbout" />
           <button id="btnTableWizard" label="Table Query Wizard" onAction="OnTableWizard" />
           <button id="btnUpdateCells" label="Update Selected Cells" onAction="OnUpdateSelectedCells" />
           <button id="btnInsertRows" label="Insert Selected Rows" onAction="OnInsertSelectedRows" />
