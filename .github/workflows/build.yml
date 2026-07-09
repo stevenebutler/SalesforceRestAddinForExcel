@@ -10,9 +10,12 @@ concurrency:
   group: build-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   build:
-    name: Build (net48 + pack XLL)
+    name: Test and Release build
     runs-on: ubuntu-latest
     env:
       DOTNET_NOLOGO: "1"
@@ -20,6 +23,9 @@ jobs:
       DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
       FC_CONFIGURATION: Release
       FC_GIT_COMMIT: ${{ github.sha }}
+      PUBLISH_DIR: src/SalesforceRestAddin.ExcelDna/bin/Release/net48/publish
+      DIST_DIR: dist
+      NODE_OPTIONS: "--disable-warning=DEP0040"
 
     steps:
       - name: Checkout
@@ -30,14 +36,71 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: Build Core, Windows.Ui, ExcelDna (pack)
-        run: ./scripts/dev-container.sh build
+      - name: Test (net10.0 + TUnit)
+        run: ./scripts/dev-container.sh test
 
-      - name: Upload packed XLLs
+      - name: Build Release (Core, Windows.Ui, ExcelDna pack)
+        run: ./scripts/dev-container.sh build
+        env:
+          FC_CONFIGURATION: Release
+
+      - name: Stage packed XLLs
+        run: |
+          set -euo pipefail
+          mkdir -p "$DIST_DIR"
+          shopt -s nullglob
+          packed64=("$PUBLISH_DIR"/*AddIn64*-packed.xll)
+          packed32=("$PUBLISH_DIR"/*AddIn-packed.xll)
+          if [[ ${#packed64[@]} -ne 1 || ${#packed32[@]} -ne 1 ]]; then
+            echo "Expected one 32-bit and one 64-bit packed XLL in $PUBLISH_DIR:" >&2
+            ls -la "$PUBLISH_DIR" || true
+            exit 1
+          fi
+          cp -f "${packed64[0]}" "$DIST_DIR/SalesforceRestAddin64-packed.xll"
+          cp -f "${packed32[0]}" "$DIST_DIR/SalesforceRestAddin-packed.xll"
+          ls -la "$DIST_DIR"
+
+      - name: Upload 64-bit XLL artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SalesforceRestAddin-xll-${{ github.sha }}
-          path: |
-            src/SalesforceRestAddin.ExcelDna/bin/Release/net48/publish/*-packed.xll
+          name: SalesforceRestAddin64-packed
+          path: dist/SalesforceRestAddin64-packed.xll
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload 32-bit XLL artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SalesforceRestAddin-packed
+          path: dist/SalesforceRestAddin-packed.xll
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish latest develop release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          short_sha="$(echo '${{ github.sha }}' | cut -c1-7)"
+          notes="$(cat <<EOF
+          Rolling build from \`develop\` (\`${short_sha}\`).
+
+          Download the XLL that matches your Excel bitness:
+          - \`SalesforceRestAddin64-packed.xll\` — 64-bit Excel
+          - \`SalesforceRestAddin-packed.xll\` — 32-bit Excel
+
+          Each successful \`develop\` build replaces this release.
+          EOF
+          )"
+
+          # Mutable tag: drop any previous latest release/tag, then recreate as the repo Latest.
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+
+          gh release create latest \
+            --title "Latest develop build (${short_sha})" \
+            --notes "$notes" \
+            --target "${{ github.sha }}" \
+            --latest \
+            "$DIST_DIR/SalesforceRestAddin64-packed.xll" \
+            "$DIST_DIR/SalesforceRestAddin-packed.xll"
