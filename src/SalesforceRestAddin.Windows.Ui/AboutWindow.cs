@@ -50,15 +50,26 @@ public sealed class AboutWindow : Window
             Margin = new Thickness(0, 0, 0, 12),
         });
 
-        var repoBlock = new TextBlock { Margin = new Thickness(0, 0, 0, 16), TextWrapping = TextWrapping.Wrap };
+        var repoBlock = new TextBlock { Margin = new Thickness(0, 0, 0, 12), TextWrapping = TextWrapping.Wrap };
         repoBlock.Inlines.Add("GitHub: ");
         var link = new Hyperlink(new Run(ProductBranding.RepositoryDisplayName))
         {
             NavigateUri = new Uri(ProductBranding.RepositoryUrl),
         };
-        link.RequestNavigate += OnRepositoryLinkClick;
+        link.RequestNavigate += OnExternalLinkClick;
         repoBlock.Inlines.Add(link);
         root.Children.Add(repoBlock);
+
+        var creditBlock = new TextBlock { Margin = new Thickness(0, 0, 0, 16), TextWrapping = TextWrapping.Wrap };
+        creditBlock.Inlines.Add("Inspired by ");
+        var inspirationLink = new Hyperlink(new Run(ProductBranding.InspirationRepositoryDisplayName))
+        {
+            NavigateUri = new Uri(ProductBranding.InspirationRepositoryUrl),
+        };
+        inspirationLink.RequestNavigate += OnExternalLinkClick;
+        creditBlock.Inlines.Add(inspirationLink);
+        creditBlock.Inlines.Add(".");
+        root.Children.Add(creditBlock);
 
         var ok = new Button { Content = "OK", Width = 80, HorizontalAlignment = HorizontalAlignment.Right };
         ok.Click += (_, _) => { DialogResult = true; Close(); };
@@ -66,7 +77,7 @@ public sealed class AboutWindow : Window
         Content = root;
     }
 
-    private static void OnRepositoryLinkClick(object sender, RequestNavigateEventArgs e)
+    private static void OnExternalLinkClick(object sender, RequestNavigateEventArgs e)
     {
         try
         {

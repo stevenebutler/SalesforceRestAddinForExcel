@@ -61,3 +61,11 @@ ProgId and COM API GUIDs are unchanged for macro compatibility.
 ## Docs
 
 See [AGENTS.md](AGENTS.md) and [docs/ribbon/README.md](docs/ribbon/README.md).
+
+## License
+
+[MIT](LICENSE) — Copyright © 2026 Steven Butler.
+
+## Credits
+
+Inspired by the [Force.com Connector](https://github.com/good-ghost/ForceConnector) Excel VSTO add-in (`good-ghost/ForceConnector`, MIT). This project is a REST + Excel-DNA reimplementation with VBA ProgId compatibility for existing macros.
