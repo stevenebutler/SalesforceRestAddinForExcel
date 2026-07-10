@@ -1,13 +1,27 @@
 <Project>
+  <PropertyGroup>
+    <PinnedMicrosoftOfficeInteropExcelVersion>15.0.4795.1001</PinnedMicrosoftOfficeInteropExcelVersion>
+    <PinnedSystemTextJsonVersion>8.0.5</PinnedSystemTextJsonVersion>
+  </PropertyGroup>
+
   <ItemGroup>
-    <PackageVersion Include="ExcelDna.AddIn" Version="1.8.0" />
+    <PackageVersion Include="ExcelDna.AddIn" Version="1.9.0" />
     <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" />
-    <PackageVersion Include="Microsoft.Office.Interop.Excel" Version="15.0.4795.1001" />
-    <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
-    <PackageVersion Include="Polyfill" Version="5.0.0" />
+    <PackageVersion Include="Microsoft.Office.Interop.Excel" Version="$(PinnedMicrosoftOfficeInteropExcelVersion)" />
+    <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.4078.44" />
+    <PackageVersion Include="Polyfill" Version="10.11.2" />
     <PackageVersion Include="System.Net.Http" Version="4.3.4" />
-    <PackageVersion Include="System.Text.Json" Version="8.0.5" />
+    <PackageVersion Include="System.Text.Json" Version="$(PinnedSystemTextJsonVersion)" />
     <PackageVersion Include="TUnit" Version="1.58.0" />
     <PackageVersion Include="TUnit.Mocks.Http" Version="1.58.0" />
   </ItemGroup>
+
+  <Target Name="ValidatePinnedPackageVersions" BeforeTargets="CollectPackageReferences;Restore;Build">
+    <Error
+      Condition="'%(PackageVersion.Identity)' == 'Microsoft.Office.Interop.Excel' and '%(PackageVersion.Version)' != '$(PinnedMicrosoftOfficeInteropExcelVersion)'"
+      Text="Microsoft.Office.Interop.Excel is pinned to $(PinnedMicrosoftOfficeInteropExcelVersion). Newer PIAs have broken Excel runtime binding for the packed add-in." />
+    <Error
+      Condition="'%(PackageVersion.Identity)' == 'System.Text.Json' and '%(PackageVersion.Version)' != '$(PinnedSystemTextJsonVersion)'"
+      Text="System.Text.Json is pinned to $(PinnedSystemTextJsonVersion). Newer versions add net48 runtime dependencies that must be packed and Windows-smoke-tested first." />
+  </Target>
 </Project>

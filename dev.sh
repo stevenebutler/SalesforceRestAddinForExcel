@@ -40,7 +40,8 @@ run_compose() {
 
 run_dev() {
   if [[ "${1:-}" == "shell" ]]; then
-    run_compose run --rm dev "$@"
+    shift || true
+    run_compose run --rm dev shell "$@"
   else
     export FC_GIT_COMMIT="${FC_GIT_COMMIT:-$(git -C "$ROOT_DIR" describe --always --dirty 2>/dev/null || echo unknown)}"
     export FC_CONFIGURATION="${FC_CONFIGURATION:-Debug}"
@@ -99,7 +100,7 @@ case "$COMMAND" in
     ;;
   shell)
     shift || true
-    run_dev "$@"
+    run_dev shell "$@"
     ;;
   build|test|restore|down)
     run_dev "$COMMAND" "${@:2}"
