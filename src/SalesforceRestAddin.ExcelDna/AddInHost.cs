@@ -211,6 +211,7 @@ public static class AddInHost
         var sheet = (Worksheet)excel.ActiveSheet;
         var startRow = wizardResult.AnchorRow;
         var startColumn = wizardResult.AnchorColumn;
+        var options = LoadOptions();
 
         SessionFlowTrace.Log(
             $"Table Query Wizard: writing layout object={wizardResult.Describe.Name} fields={wizardResult.Fields.Count} anchor=R{startRow}C{startColumn}");
@@ -222,7 +223,9 @@ public static class AddInHost
             wizardResult.Describe,
             wizardResult.Fields,
             wizardResult.Criteria,
-            AutomaticSizingMode.Width);
+            options.ColumnSizingMode == ColumnSizingMode.HeadersOnly
+                ? AutomaticSizingMode.Width
+                : AutomaticSizingMode.None);
 
         ((Range)sheet.Cells[startRow, startColumn]).Select();
         DataOperationHost.RunQueryTableData();

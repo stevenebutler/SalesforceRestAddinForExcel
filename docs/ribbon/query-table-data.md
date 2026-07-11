@@ -116,7 +116,7 @@ Independent of `NoWarning` (which gates insert / include-hidden update confirms)
 
 - One `object[,]` per page (or accumulate pages up to memory policy) → minimal `Range.Value` calls.
 - Column formats applied at column scope after write.
-- Column AutoFit (header + body) and row AutoFit with 3× standard-height cap after write — see [common-performance-requirements.md](./common-performance-requirements.md).
+- Apply the selected column and row sizing policies after write — see [common-performance-requirements.md](./common-performance-requirements.md). First-page and all-data column policies do not AutoFit during wizard header creation.
 
 ### NFR-QTD-2 SOQL generation in Core
 

@@ -85,6 +85,8 @@ Per header cell:
 
 - **Display:** field label in **bold**  
 - **Fill:** pastel background by bucket (table above)  
+
+The wizard AutoFits the new header block immediately only when column sizing is set to **Fit columns to headers only**. First-page and all-data policies defer column sizing to the result writer.
 - **Comment:** `API Name: {name}`, type, read-only/required hints, picklist values for picklists  
 
 Field label → API name mapping for later query/update uses describe metadata — see [query-table-data.md](./query-table-data.md) FR-QTD-1.
