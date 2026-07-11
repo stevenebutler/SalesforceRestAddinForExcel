@@ -1,12 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
 namespace SalesforceRestAddin.Core.Session;
 
 /// <summary>
-/// Persists connector behavior options. Missing file, invalid JSON, or invalid per-field values
-/// fall back to <see cref="ConnectorOptions.Default"/> for each boolean (legacy RegDB absent-key behavior).
+/// Persists connector behavior options. Malformed files return defaults; invalid recognized
+/// values fall back to that setting's default and are recorded in the session trace.
 /// </summary>
 public sealed class JsonConnectorOptionsStore : IConnectorOptionsStore
 {
@@ -16,12 +17,21 @@ public sealed class JsonConnectorOptionsStore : IConnectorOptionsStore
         WriteIndented = true,
     };
 
+    private readonly Action<string> _warningLogger;
+
     public JsonConnectorOptionsStore(string filePath)
+        : this(filePath, SessionFlowTrace.Log)
+    {
+    }
+
+    internal JsonConnectorOptionsStore(string filePath, Action<string> warningLogger)
     {
         if (string.IsNullOrWhiteSpace(filePath))
         {
             throw new ArgumentException("File path is required.", nameof(filePath));
         }
+
+        _warningLogger = warningLogger ?? throw new ArgumentNullException(nameof(warningLogger));
 
         FilePath = filePath;
     }
@@ -41,22 +51,29 @@ public sealed class JsonConnectorOptionsStore : IConnectorOptionsStore
             var root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object)
             {
+                LogWarning("Connector options: settings root is not an object; using defaults.");
                 return ConnectorOptions.Default;
             }
 
-            return new ConnectorOptions
+            var invalidSettings = new List<string>();
+            var options = new ConnectorOptions
             {
-                UseReference = GetBoolOrDefault(root, "useReference"),
-                NoWarning = GetBoolOrDefault(root, "noWarning"),
-                NoConfirmQueryDownload = GetBoolOrDefault(root, "noConfirmQueryDownload"),
-                NoQueryLimit = GetBoolOrDefault(root, "noQueryLimit"),
-                AutoAssignRule = GetBoolOrDefault(root, "autoAssignRule"),
-                IncludeHiddenCells = ReadIncludeHiddenCells(root),
-                CompositeBatchSize = GetIntOrDefault(root, "compositeBatchSize", ConnectorOptions.Default.CompositeBatchSize),
+                UseReference = ReadBool(root, "useReference", ConnectorOptions.Default.UseReference, invalidSettings),
+                NoWarning = ReadBool(root, "noWarning", ConnectorOptions.Default.NoWarning, invalidSettings),
+                NoConfirmQueryDownload = ReadBool(root, "noConfirmQueryDownload", ConnectorOptions.Default.NoConfirmQueryDownload, invalidSettings),
+                NoQueryLimit = ReadBool(root, "noQueryLimit", ConnectorOptions.Default.NoQueryLimit, invalidSettings),
+                AutoAssignRule = ReadBool(root, "autoAssignRule", ConnectorOptions.Default.AutoAssignRule, invalidSettings),
+                IncludeHiddenCells = ReadIncludeHiddenCells(root, invalidSettings),
+                ColumnSizingMode = ReadColumnSizingMode(root, invalidSettings),
+                RowSizingMode = ReadRowSizingMode(root, invalidSettings),
+                CompositeBatchSize = ReadPositiveInt(root, "compositeBatchSize", ConnectorOptions.Default.CompositeBatchSize, invalidSettings),
             };
+            LogInvalidSettings(invalidSettings);
+            return options;
         }
         catch (JsonException)
         {
+            LogWarning("Connector options: settings JSON is invalid; using defaults.");
             return ConnectorOptions.Default;
         }
     }
@@ -82,6 +99,8 @@ public sealed class JsonConnectorOptionsStore : IConnectorOptionsStore
             noQueryLimit = options.NoQueryLimit,
             autoAssignRule = options.AutoAssignRule,
             includeHiddenCells = options.IncludeHiddenCells,
+            columnSizingMode = ToJsonValue(options.ColumnSizingMode),
+            rowSizingMode = ToJsonValue(options.RowSizingMode),
             compositeBatchSize = options.CompositeBatchSize,
         };
 
@@ -92,56 +111,139 @@ public sealed class JsonConnectorOptionsStore : IConnectorOptionsStore
     /// Prefer <c>includeHiddenCells</c>; migrate legacy <c>skipHiddenCells</c> by inversion.
     /// Missing both → false (skip hidden by default).
     /// </summary>
-    private static bool ReadIncludeHiddenCells(JsonElement root)
+    private static bool ReadIncludeHiddenCells(JsonElement root, ICollection<string> invalidSettings)
     {
-        if (TryGetBool(root, "includeHiddenCells", out var include))
+        if (root.TryGetProperty("includeHiddenCells", out _))
         {
-            return include;
+            return ReadBool(root, "includeHiddenCells", ConnectorOptions.Default.IncludeHiddenCells, invalidSettings);
         }
 
-        if (TryGetBool(root, "skipHiddenCells", out var skip))
+        if (root.TryGetProperty("skipHiddenCells", out _))
         {
-            return !skip;
+            return !ReadBool(root, "skipHiddenCells", defaultValue: true, invalidSettings);
         }
 
-        return false;
+        return ConnectorOptions.Default.IncludeHiddenCells;
     }
 
-    private static bool GetBoolOrDefault(JsonElement root, string propertyName) =>
-        TryGetBool(root, propertyName, out var value) && value;
-
-    private static bool TryGetBool(JsonElement root, string propertyName, out bool value)
+    private static bool ReadBool(
+        JsonElement root,
+        string propertyName,
+        bool defaultValue,
+        ICollection<string> invalidSettings)
     {
-        value = false;
         if (!root.TryGetProperty(propertyName, out var element))
         {
-            return false;
+            return defaultValue;
         }
 
         switch (element.ValueKind)
         {
             case JsonValueKind.True:
-                value = true;
                 return true;
             case JsonValueKind.False:
-                value = false;
-                return true;
-            default:
                 return false;
+            default:
+                invalidSettings.Add(propertyName);
+                return defaultValue;
         }
     }
 
-    private static int GetIntOrDefault(JsonElement root, string propertyName, int defaultValue)
+    private static int ReadPositiveInt(
+        JsonElement root,
+        string propertyName,
+        int defaultValue,
+        ICollection<string> invalidSettings)
     {
         if (!root.TryGetProperty(propertyName, out var value))
         {
             return defaultValue;
         }
 
-        return value.ValueKind switch
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) && number > 0)
         {
-            JsonValueKind.Number when value.TryGetInt32(out var n) && n > 0 => n,
-            _ => defaultValue,
-        };
+            return number;
+        }
+
+        invalidSettings.Add(propertyName);
+        return defaultValue;
     }
+
+    private static ColumnSizingMode ReadColumnSizingMode(JsonElement root, ICollection<string> invalidSettings) =>
+        ReadEnum(
+            root,
+            "columnSizingMode",
+            ConnectorOptions.Default.ColumnSizingMode,
+            invalidSettings,
+            new Dictionary<string, ColumnSizingMode>(StringComparer.Ordinal)
+            {
+                ["allDownloadedData"] = ColumnSizingMode.AllDownloadedData,
+                ["firstDownloadedPage"] = ColumnSizingMode.FirstDownloadedPage,
+                ["headersOnly"] = ColumnSizingMode.HeadersOnly,
+            });
+
+    private static RowSizingMode ReadRowSizingMode(JsonElement root, ICollection<string> invalidSettings) =>
+        ReadEnum(
+            root,
+            "rowSizingMode",
+            ConnectorOptions.Default.RowSizingMode,
+            invalidSettings,
+            new Dictionary<string, RowSizingMode>(StringComparer.Ordinal)
+            {
+                ["fitEachPage"] = RowSizingMode.FitEachPage,
+                ["forceSingleLine"] = RowSizingMode.ForceSingleLine,
+                ["none"] = RowSizingMode.None,
+            });
+
+    private static T ReadEnum<T>(
+        JsonElement root,
+        string propertyName,
+        T defaultValue,
+        ICollection<string> invalidSettings,
+        IReadOnlyDictionary<string, T> values)
+    {
+        if (!root.TryGetProperty(propertyName, out var element))
+        {
+            return defaultValue;
+        }
+
+        if (element.ValueKind == JsonValueKind.String
+            && element.GetString() is { } text
+            && values.TryGetValue(text, out var value))
+        {
+            return value;
+        }
+
+        invalidSettings.Add(propertyName);
+        return defaultValue;
+    }
+
+    private static string ToJsonValue(ColumnSizingMode mode) =>
+        mode switch
+        {
+            ColumnSizingMode.AllDownloadedData => "allDownloadedData",
+            ColumnSizingMode.FirstDownloadedPage => "firstDownloadedPage",
+            ColumnSizingMode.HeadersOnly => "headersOnly",
+            _ => throw new ArgumentOutOfRangeException(nameof(mode)),
+        };
+
+    private static string ToJsonValue(RowSizingMode mode) =>
+        mode switch
+        {
+            RowSizingMode.FitEachPage => "fitEachPage",
+            RowSizingMode.ForceSingleLine => "forceSingleLine",
+            RowSizingMode.None => "none",
+            _ => throw new ArgumentOutOfRangeException(nameof(mode)),
+        };
+
+    private void LogInvalidSettings(IReadOnlyCollection<string> invalidSettings)
+    {
+        if (invalidSettings.Count > 0)
+        {
+            LogWarning(
+                $"Connector options: invalid settings ({string.Join(", ", invalidSettings)}); using defaults for those settings.");
+        }
+    }
+
+    private void LogWarning(string message) => _warningLogger(message);
 }

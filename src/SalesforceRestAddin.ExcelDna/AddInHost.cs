@@ -221,7 +221,8 @@ public static class AddInHost
             startColumn,
             wizardResult.Describe,
             wizardResult.Fields,
-            wizardResult.Criteria);
+            wizardResult.Criteria,
+            AutomaticSizingMode.Width);
 
         ((Range)sheet.Cells[startRow, startColumn]).Select();
         DataOperationHost.RunQueryTableData();
@@ -232,6 +233,7 @@ public static class AddInHost
         EnsureLoggedInAndRefreshUi(Services.Gate);
         var excel = (ExcelApplication)ExcelDnaUtil.Application;
         var client = Services.CreateDataClient();
+        var options = LoadOptions();
         var objects = ExcelStaAsyncHost.Run(
             "Loading objects…",
             excel,
@@ -276,7 +278,11 @@ public static class AddInHost
                             sheet.Name = DescribeSheetName.Sanitize(objectName);
                             if (result.Projection is not null)
                             {
-                                SheetProjectionWriter.Apply(sheet, result.Projection);
+                                SheetProjectionWriter.Apply(
+                                    sheet,
+                                    result.Projection,
+                                    options.ColumnSizingMode,
+                                    options.RowSizingMode);
                             }
                         });
                     }
@@ -357,10 +363,12 @@ public static class AddInHost
             return;
         }
 
-        // Confirm when the user opted into updating AutoFilter/manually hidden cells.
-        if (confirmIncludeHidden && options.IncludeHiddenCells && !options.NoWarning && !ConfirmationDialogWindow.Show(
+        // Update confirmation is controlled by NoWarning; include-hidden only changes its wording.
+        if (confirmIncludeHidden && !options.NoWarning && !ConfirmationDialogWindow.Show(
                 AddInTitle,
-                $"Update {selection.BodyRowIndices.Count} row(s), including any hidden rows/columns in the selection?"))
+                options.IncludeHiddenCells
+                    ? $"Update {selection.BodyRowIndices.Count} row(s), including any hidden rows/columns in the selection?"
+                    : FormatRecordCountConfirm("Update", selection.BodyRowIndices.Count, "in", binding.Describe.Label)))
         {
             return;
         }
@@ -391,7 +399,7 @@ public static class AddInHost
             return;
         }
 
-        DataOperationHost.ApplyResult(sheet, result, binding, excel);
+        DataOperationHost.ApplyResult(sheet, result, options, binding, excel);
     }
 
     private static string GetOperationTitle(
@@ -489,9 +497,10 @@ public static class AddInHost
     internal static void DataOperationHostApply(
         Worksheet sheet,
         DataOperationResult result,
+        ConnectorOptions options,
         ForceTableBinding? binding = null,
         ExcelApplication? excel = null) =>
-        DataOperationHost.ApplyResult(sheet, result, binding, excel);
+        DataOperationHost.ApplyResult(sheet, result, options, binding, excel);
 
     private static ForceTableSelection ReadSelection(ExcelApplication excel, ForceTableSnapshot snapshot)
     {

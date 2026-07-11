@@ -14,6 +14,7 @@ public static class SessionFlowTrace
     private static readonly List<string> Buffer = new();
     private static readonly List<string> ScopeStack = new();
     private const int MaxBufferLines = 300;
+    private static bool _rolledCurrentSessionTrace;
 
     /// <summary>
     /// Starts a new top-level ribbon/COM operation trace (clears in-memory buffer).
@@ -49,6 +50,16 @@ public static class SessionFlowTrace
         lock (Sync)
         {
             WriteUnlocked(message);
+        }
+    }
+
+    internal static void ResetForTests()
+    {
+        lock (Sync)
+        {
+            Buffer.Clear();
+            ScopeStack.Clear();
+            _rolledCurrentSessionTrace = false;
         }
     }
 
@@ -103,12 +114,39 @@ public static class SessionFlowTrace
         try
         {
             SalesforceRestAddinDataPaths.EnsureDataDirectory();
+            RollSessionTraceIfNeeded();
             File.AppendAllText(SalesforceRestAddinDataPaths.SessionTraceLogFile, line + Environment.NewLine);
         }
         catch
         {
             // Trace must not break sign-in; in-memory buffer still available for error UI.
         }
+    }
+
+    private static void RollSessionTraceIfNeeded()
+    {
+        if (_rolledCurrentSessionTrace)
+        {
+            return;
+        }
+
+        var current = SalesforceRestAddinDataPaths.SessionTraceLogFile;
+        if (!File.Exists(current))
+        {
+            _rolledCurrentSessionTrace = true;
+            return;
+        }
+
+        var rolled = Path.Combine(
+            Path.GetDirectoryName(current) ?? string.Empty,
+            "session-trace-1.log");
+        if (File.Exists(rolled))
+        {
+            File.Delete(rolled);
+        }
+
+        File.Move(current, rolled);
+        _rolledCurrentSessionTrace = true;
     }
 
     private static void TrimBufferIfNeeded()
@@ -118,4 +156,5 @@ public static class SessionFlowTrace
             Buffer.RemoveAt(0);
         }
     }
+
 }

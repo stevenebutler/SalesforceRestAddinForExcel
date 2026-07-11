@@ -91,11 +91,18 @@ public static class ForceTableReader
         var headerApiNames = ReadHeaderApiNames(table, columnCount);
         headerCommentStopwatch.Stop();
         SessionFlowTrace.Log(
-            $"ForceTableReader: header row read values={headerValueStopwatch.ElapsedMilliseconds}ms " +
-            $"comments={headerCommentStopwatch.ElapsedMilliseconds}ms");
+            $"ForceTableReader: header row read cells={columnCount} " +
+            $"values={headerValueStopwatch.ElapsedMilliseconds}ms " +
+            $"notes={headerCommentStopwatch.ElapsedMilliseconds}ms");
         var bodyRowCount = Math.Max(0, table.Rows.Count - 2);
         var body = ReadBody(table, bodyRowCount, columnCount);
         var criteriaRow = ReadCriteriaRow(table, columnCount);
+        var hiddenRows = ReadHiddenRows(worksheet, startRow, bodyRowCount);
+        var hiddenColumns = ReadHiddenColumns(worksheet, startColumn, columnCount);
+        SessionFlowTrace.Log(
+            $"ForceTableReader: visibility bodyRows={bodyRowCount} columns={columnCount} " +
+            $"hiddenBodyRows={FormatHiddenRows(hiddenRows, startRow)} " +
+            $"hiddenColumns={FormatHiddenColumns(hiddenColumns, startColumn)}");
 
         return new ForceTableSnapshot
         {
@@ -106,8 +113,8 @@ public static class ForceTableReader
             Body = body,
             StartRow = startRow,
             StartColumn = startColumn,
-            HiddenRowIndices = ReadHiddenRows(worksheet, startRow, bodyRowCount),
-            HiddenColumnIndices = ReadHiddenColumns(worksheet, startColumn, columnCount),
+            HiddenRowIndices = hiddenRows,
+            HiddenColumnIndices = hiddenColumns,
         };
     }
 
@@ -300,5 +307,24 @@ public static class ForceTableReader
         }
 
         return hidden.Count == 0 ? null : hidden;
+    }
+
+    private static string FormatHiddenRows(IReadOnlyList<int>? hiddenRows, int startRow) =>
+        FormatHiddenIndices(hiddenRows, index => $"body={index}/sheet={startRow + 2 + index}");
+
+    private static string FormatHiddenColumns(IReadOnlyList<int>? hiddenColumns, int startColumn) =>
+        FormatHiddenIndices(hiddenColumns, index => $"table={index}/sheet={startColumn + index}");
+
+    private static string FormatHiddenIndices(IReadOnlyList<int>? indices, Func<int, string> format)
+    {
+        if (indices is null || indices.Count == 0)
+        {
+            return "none";
+        }
+
+        const int maximumLoggedIndices = 20;
+        var displayed = indices.Take(maximumLoggedIndices).Select(format);
+        var suffix = indices.Count > maximumLoggedIndices ? ", …" : string.Empty;
+        return $"count={indices.Count} [{string.Join(", ", displayed)}{suffix}]";
     }
 }

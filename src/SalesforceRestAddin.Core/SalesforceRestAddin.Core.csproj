@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="SalesforceRestAddin" />
     <InternalsVisibleTo Include="SalesforceRestAddin.Tests" />
   </ItemGroup>
 

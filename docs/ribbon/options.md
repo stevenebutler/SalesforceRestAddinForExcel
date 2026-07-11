@@ -34,6 +34,8 @@ Map to [`ConnectorOptions`](../../src/SalesforceRestAddin.Core/Session/Connector
 | No Query Limit | `NoQueryLimit` | false | Skip 3,500 row / 20 col caps on query-rows, delete, update limits |
 | Enable Auto Assign Rule | `AutoAssignRule` | false | When false (default), send `Sforce-Auto-Assign: FALSE` on create/update |
 | Include Hidden Columns/Rows | `IncludeHiddenCells` | false | When unchecked (default), update omits AutoFilter/manually hidden rows/columns — see [update-selected-cells.md](./update-selected-cells.md) |
+| Column sizing | `ColumnSizingMode` | First downloaded page | Fit columns to the first downloaded page, all downloaded data, or headers only |
+| Row sizing | `RowSizingMode` | Force to single line | Force a single line, fit rows as each page downloads, or leave rows unchanged |
 
 ### FR-OPT-3 Settings (dropped)
 
@@ -42,6 +44,11 @@ Map to [`ConnectorOptions`](../../src/SalesforceRestAddin.Core/Session/Connector
 | Managed / translation data toggle | **Dropped** — Translation Helper out of scope; omit from dialog |
 
 ### FR-OPT-4 Persistence
+
+Sizing modes are persisted as the string values `columnSizingMode` and `rowSizingMode`.
+Missing sizing values use their defaults; the legacy `disableAutomaticSizing` setting is ignored.
+Malformed settings JSON resets all options to defaults and logs a warning. An invalid recognized
+setting value defaults only that setting and is included in one warning for the load.
 
 - Load current values on open.
 - **OK** saves to JSON store (`SalesforceRestAddinDataPaths`); **Cancel** discards.

@@ -141,6 +141,11 @@ public static class UpdateCells
         var visibleRows = options.IncludeHiddenCells
             ? selection.BodyRowIndices.ToList()
             : HiddenSelectionFilter.VisibleBodyRows(binding.Snapshot, selection.BodyRowIndices).ToList();
+        SessionFlowTrace.Log(
+            $"UpdateCells: includeHidden={options.IncludeHiddenCells} " +
+            $"selectedBodyRows={selection.BodyRowIndices.Count} " +
+            $"capturedHiddenBodyRows={binding.Snapshot.HiddenRowIndices?.Count ?? 0} " +
+            $"rowsForPayload={visibleRows.Count}");
 
         foreach (var bodyRow in visibleRows)
         {

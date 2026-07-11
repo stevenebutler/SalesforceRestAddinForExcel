@@ -37,6 +37,12 @@ public sealed class ConnectorOptions
     /// </summary>
     public bool IncludeHiddenCells { get; init; }
 
+    /// <summary>Controls column-width sizing after Salesforce data writes.</summary>
+    public ColumnSizingMode ColumnSizingMode { get; init; } = ColumnSizingMode.FirstDownloadedPage;
+
+    /// <summary>Controls row-height sizing after Salesforce data writes.</summary>
+    public RowSizingMode RowSizingMode { get; init; } = RowSizingMode.ForceSingleLine;
+
     /// <summary>REST composite batch size (create/update/delete/retrieve). Default 200.</summary>
     public int CompositeBatchSize { get; init; } = 200;
 

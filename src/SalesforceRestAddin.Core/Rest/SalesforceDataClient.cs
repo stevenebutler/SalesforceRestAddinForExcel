@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Text.Json;
 using SalesforceRestAddin.Core;
@@ -244,20 +245,42 @@ public sealed class SalesforceDataClient
         CancellationToken cancellationToken)
     {
         SessionFlowTrace.Log($"REST {operation}: {request.Method} {request.RequestUri}");
-        using var response = await _client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode)
+        var stopwatch = Stopwatch.StartNew();
+        var responseCompleted = false;
+        try
         {
+            using var response = await _client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            stopwatch.Stop();
             SessionFlowTrace.Log(
-                $"REST {operation} failed: {(int)response.StatusCode} {response.ReasonPhrase}");
-            if (!string.IsNullOrWhiteSpace(body))
-            {
-                SessionFlowTrace.Log($"Response body: {TrimForLog(body)}");
-            }
-        }
+                $"REST {operation} completed: {(int)response.StatusCode} {response.ReasonPhrase} " +
+                $"bodyChars={body.Length} elapsed={stopwatch.Elapsed.TotalMilliseconds:0}ms");
+            responseCompleted = true;
 
-        response.EnsureSuccessStatusCode();
-        return body;
+            if (!response.IsSuccessStatusCode)
+            {
+                SessionFlowTrace.Log(
+                    $"REST {operation} failed: {(int)response.StatusCode} {response.ReasonPhrase}");
+                if (!string.IsNullOrWhiteSpace(body))
+                {
+                    SessionFlowTrace.Log($"Response body: {TrimForLog(body)}");
+                }
+            }
+
+            response.EnsureSuccessStatusCode();
+            return body;
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            if (!responseCompleted)
+            {
+                SessionFlowTrace.Log(
+                    $"REST {operation} transport failed: {ex.GetType().Name} " +
+                    $"elapsed={stopwatch.Elapsed.TotalMilliseconds:0}ms");
+            }
+            throw;
+        }
     }
 
     private static string TrimForLog(string body, int maxLength = 2000) =>

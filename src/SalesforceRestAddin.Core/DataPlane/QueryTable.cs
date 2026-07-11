@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Diagnostics;
 using SalesforceRestAddin.Core;
 using SalesforceRestAddin.Core.DataPlane;
 using SalesforceRestAddin.Core.Rest;
@@ -21,6 +22,36 @@ public sealed class QueryTableInput
 
     /// <summary>Optional progress sink for pagination (FR-QTD-7).</summary>
     public Action<OperationProgress>? Progress { get; init; }
+}
+
+/// <summary>
+/// A single, ordered page prepared for writing to a worksheet. This type deliberately
+/// contains only Core table data; the Excel host owns the STA hand-off and COM writes.
+/// </summary>
+internal sealed class QueryTablePage
+{
+    public int PageNumber { get; init; }
+
+    public required SheetProjection Projection { get; init; }
+
+    /// <summary>Present only on the first page, before its values are written.</summary>
+    public ClearBodyRegion? ClearBody { get; init; }
+
+    /// <summary>
+    /// Present only on the first non-empty page. This is the complete result row count
+    /// used by the Excel host to format the body before subsequent pages arrive.
+    /// </summary>
+    public int? TotalRowCount { get; init; }
+
+    public int RecordsProcessed { get; init; }
+}
+
+internal sealed class PagedQueryResult
+{
+    public required DataOperationResult Result { get; init; }
+
+    /// <summary>Combined duration of the SOQL/count HTTP requests in this query operation.</summary>
+    public TimeSpan ApiElapsed { get; init; }
 }
 
 public static class QueryTable
@@ -85,6 +116,177 @@ public static class QueryTable
         return await RunQueryAndProjectAsync(client, binding, soql, input, cancellationToken)
             .ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Downloads a normal SOQL cursor one page at a time. The caller is responsible for
+    /// handing pages to Excel (or another UI) and may return as soon as a page is queued,
+    /// allowing the next queryMore request to overlap with the prior page write.
+    /// Reference-join queries deliberately retain their existing accumulated-result path.
+    /// </summary>
+    internal static async Task<PagedQueryResult> RunPagedAsync(
+        SalesforceDataClient client,
+        QueryTableInput input,
+        Func<QueryTablePage, CancellationToken, Task> enqueuePageAsync,
+        CancellationToken cancellationToken = default)
+    {
+        if (enqueuePageAsync is null)
+        {
+            throw new ArgumentNullException(nameof(enqueuePageAsync));
+        }
+
+        SessionFlowTrace.Log($"QueryTable paged: object={input.Snapshot.ObjectApiName}");
+
+        var describe = await client.DescribeAsync(input.Snapshot.ObjectApiName, cancellationToken)
+            .ConfigureAwait(false);
+        var bindResult = ForceTableBinder.Bind(input.Snapshot, describe);
+        if (!bindResult.Succeeded)
+        {
+            return Complete(new DataOperationResult { ErrorSummary = bindResult.Errors[0].Message }, TimeSpan.Zero);
+        }
+
+        var binding = bindResult.Binding!;
+        var criteria = await SoqlCriteriaParser.ParseAsync(
+            input.Snapshot.CriteriaRow,
+            binding.Catalog,
+            input.Options,
+            input.ReferenceResolver,
+            cancellationToken).ConfigureAwait(false);
+        if (!criteria.Succeeded)
+        {
+            return Complete(new DataOperationResult { ErrorSummary = criteria.Errors[0].Message }, TimeSpan.Zero);
+        }
+
+        if (criteria.ReferenceJoinIds is { Count: > 0 } && criteria.ReferenceJoinField is not null)
+        {
+            var batches = SoqlQueryBuilder.BuildReferenceInBatches(
+                criteria.ReferenceJoinIds,
+                criteria.ReferenceJoinField,
+                input.Options.CompositeBatchSize);
+            var referenceQueryStopwatch = Stopwatch.StartNew();
+            var result = await RunBatchedReferenceQueriesAsync(
+                client,
+                binding,
+                batches,
+                criteria.WhereClause ?? string.Empty,
+                input,
+                cancellationToken).ConfigureAwait(false);
+            referenceQueryStopwatch.Stop();
+            return Complete(result, referenceQueryStopwatch.Elapsed);
+        }
+
+        var where = criteria.WhereClause ?? string.Empty;
+        var soql = SoqlQueryBuilder.BuildSelectQuery(binding, where);
+        var apiElapsed = TimeSpan.Zero;
+
+        async Task<QueryResultPage> QueryAsyncTimed(string? nextRecordsUrl)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            try
+            {
+                return await client.QueryAsync(soql, nextRecordsUrl, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                stopwatch.Stop();
+                apiElapsed += stopwatch.Elapsed;
+            }
+        }
+
+        if (input.ConfirmQueryTableDownload)
+        {
+            var countStopwatch = Stopwatch.StartNew();
+            var countError = await ValidateCountAsync(client, binding, where, cancellationToken).ConfigureAwait(false);
+            countStopwatch.Stop();
+            apiElapsed += countStopwatch.Elapsed;
+            if (countError is not null)
+            {
+                return Complete(countError, apiElapsed);
+            }
+        }
+
+        var processed = 0;
+        var isFirstPage = true;
+        var pageNumber = 0;
+        QueryResultPage? page = null;
+        try
+        {
+            page = await QueryAsyncTimed(null).ConfigureAwait(false);
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (page.Records.Count == 0 && isFirstPage)
+                {
+                    var noRows = BuildNoRowsResult(binding);
+                    pageNumber++;
+                    await enqueuePageAsync(
+                        new QueryTablePage
+                        {
+                            PageNumber = pageNumber,
+                            Projection = noRows.Projection!,
+                            ClearBody = noRows.ClearBody,
+                            RecordsProcessed = 0,
+                        },
+                        cancellationToken).ConfigureAwait(false);
+                    SessionFlowTrace.Log($"QueryTable page {pageNumber}: queued records=0 downloaded=0");
+                    return Complete(new DataOperationResult { RecordsProcessed = 0 }, apiElapsed);
+                }
+
+                if (page.Records.Count > 0)
+                {
+                    int? totalRowCount = isFirstPage
+                        ? Math.Max(page.TotalSize, page.Records.Count)
+                        : null;
+                    var pageResult = ProjectPage(binding, page.Records, input, processed, totalRowCount);
+                    processed += page.Records.Count;
+                    pageNumber++;
+                    var queueStopwatch = Stopwatch.StartNew();
+                    await enqueuePageAsync(
+                        new QueryTablePage
+                        {
+                            PageNumber = pageNumber,
+                            Projection = pageResult.Projection!,
+                            ClearBody = pageResult.ClearBody,
+                            TotalRowCount = totalRowCount,
+                            RecordsProcessed = processed,
+                        },
+                        cancellationToken).ConfigureAwait(false);
+                    queueStopwatch.Stop();
+                    SessionFlowTrace.Log(
+                        $"QueryTable page {pageNumber}: queued records={page.Records.Count} " +
+                        $"downloaded={processed} queueWait={FormatElapsed(queueStopwatch.Elapsed)}");
+                    ReportDownload(input, processed, page.TotalSize);
+                }
+
+                if (page.Done || page.NextRecordsUrl is null)
+                {
+                    return Complete(new DataOperationResult { RecordsProcessed = processed }, apiElapsed);
+                }
+
+                isFirstPage = false;
+                cancellationToken.ThrowIfCancellationRequested();
+                // enqueuePageAsync has only queued the current page. Start queryMore now so
+                // its HTTP request can run while the UI thread writes that page.
+                page = await QueryAsyncTimed(page.NextRecordsUrl).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return Complete(new DataOperationResult { WasCancelled = true, RecordsProcessed = processed }, apiElapsed);
+        }
+        catch (HttpRequestException ex)
+        {
+            SessionFlowTrace.LogException("QueryTable paged: HTTP request failed", ex);
+            return Complete(BuildErrorProjection(binding, ExceptionChainText.Format(ex), processed), apiElapsed);
+        }
+    }
+
+    private static PagedQueryResult Complete(DataOperationResult result, TimeSpan apiElapsed) => new()
+    {
+        Result = result,
+        ApiElapsed = apiElapsed,
+    };
+
+    private static string FormatElapsed(TimeSpan elapsed) => $"{Math.Max(0, elapsed.TotalMilliseconds):0}ms";
 
     public static async Task<QueryTableCountResult> GetMatchCountAsync(
         SalesforceDataClient client,
@@ -276,6 +478,37 @@ public static class QueryTable
             return BuildNoRowsResult(binding);
         }
 
+        return new DataOperationResult
+        {
+            Projection = CreateProjection(binding, records, input, bodyRowOffset: 0),
+            ClearBody = CreateClearBody(binding, records.Count),
+            RecordsProcessed = records.Count,
+        };
+    }
+
+    private static DataOperationResult ProjectPage(
+        ForceTableBinding binding,
+        IReadOnlyList<Dictionary<string, object?>> records,
+        QueryTableInput input,
+        int bodyRowOffset,
+        int? totalSize)
+    {
+        return new DataOperationResult
+        {
+            Projection = CreateProjection(binding, records, input, bodyRowOffset),
+            ClearBody = totalSize is int total
+                ? CreateClearBody(binding, Math.Max(total, records.Count))
+                : null,
+            RecordsProcessed = records.Count,
+        };
+    }
+
+    private static SheetProjection CreateProjection(
+        ForceTableBinding binding,
+        IReadOnlyList<Dictionary<string, object?>> records,
+        QueryTableInput input,
+        int bodyRowOffset)
+    {
         var dataColumns = binding.Columns.ToList();
         var values = new object?[records.Count, dataColumns.Count];
         var formats = new List<ColumnFormat>();
@@ -288,24 +521,16 @@ public static class QueryTable
             for (var r = 0; r < records.Count; r++)
             {
                 records[r].TryGetValue(column.Field.Name, out var raw);
-                values[r, c] = FieldValueConverter.ToDisplayValue(
-                    column.Field,
-                    raw,
-                    input.Options);
+                values[r, c] = FieldValueConverter.ToDisplayValue(column.Field, raw, input.Options);
             }
         }
 
-        return new DataOperationResult
+        return new SheetProjection
         {
-            Projection = new SheetProjection
-            {
-                Values = values,
-                StartRow = binding.Snapshot.StartRow + 2,
-                StartColumn = binding.Snapshot.StartColumn,
-                ColumnFormats = formats,
-            },
-            ClearBody = CreateClearBody(binding, records.Count),
-            RecordsProcessed = records.Count,
+            Values = values,
+            StartRow = binding.Snapshot.StartRow + 2 + bodyRowOffset,
+            StartColumn = binding.Snapshot.StartColumn,
+            ColumnFormats = formats,
         };
     }
 
@@ -346,7 +571,10 @@ public static class QueryTable
         };
     }
 
-    private static DataOperationResult BuildErrorProjection(ForceTableBinding binding, string message)
+    private static DataOperationResult BuildErrorProjection(
+        ForceTableBinding binding,
+        string message,
+        int bodyRowOffset = 0)
     {
         var values = new object?[1, 1] { { "#Err" } };
         return new DataOperationResult
@@ -354,7 +582,7 @@ public static class QueryTable
             Projection = new SheetProjection
             {
                 Values = values,
-                StartRow = binding.Snapshot.StartRow + 2,
+                StartRow = binding.Snapshot.StartRow + 2 + bodyRowOffset,
                 StartColumn = binding.Snapshot.StartColumn + binding.IdColumnIndex,
             },
             ErrorSummary = message,

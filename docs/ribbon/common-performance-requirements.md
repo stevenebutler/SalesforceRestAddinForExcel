@@ -26,7 +26,7 @@ Prefer bulk range I/O. Do **not** read or write worksheet data cell-by-cell in h
 1. Build `object[,]` (or column-scoped arrays) in memory from Salesforce responses.
 2. Assign with **one** `Range.Value` per contiguous rectangle via `SheetProjectionWriter` (not per-row cell writes).
 3. Apply **number formats** at **column** or **range** scope before or after the bulk value assign.
-4. After write: **AutoFit columns** for the written block (include the header row above the body when present so widths fit labels). **AutoFit rows**, then cap any row taller than **3×** `StandardHeight` (long-text guard) — O(rows) clamp only; no per-cell height loops.
+4. After write, apply the selected sizing policies: columns fit all pages, the first page, or headers only; rows fit and cap at **3×** `StandardHeight`, force standard-height single lines, or remain unchanged. Keep range-level operations bulk; the capped-row path is the only O(rows) exception.
 5. Do not set comments, interior color, or validation **per cell** in the hot path. Batch error annotation where possible (see Error feedback).
 
 ### Formatting and derived display
@@ -38,7 +38,7 @@ Prefer bulk range I/O. Do **not** read or write worksheet data cell-by-cell in h
 | `address` / `location` | Flatten compound objects to strings in Core before array write |
 | `picklist` / text | Respect text formats (`@`) to preserve leading zeros |
 
-Row height: AutoFit the written rows, then cap auto-expansion for long text at **3×** standard height without per-cell loops in the success path.
+Row height: the default policy AutoFits written rows and caps auto-expansion at **3×** standard height. The single-line policy disables wrapping and restores `StandardHeight`; the no-fit policy leaves row layout unchanged.
 
 ### COM boundary crossings
 
@@ -169,6 +169,8 @@ Prefer recording errors in a Core result DTO; ExcelDna applies visuals in one pa
 | `NoQueryLimit` | Skip maxRows/maxCols checks |
 | `AutoAssignRule` | When false, suppress auto-assignment header |
 | `IncludeHiddenCells` | When false (default), update omits hidden rows/columns; when true, include them |
+| `ColumnSizingMode` | Fit columns to the first downloaded page (default), all downloaded data, or headers only |
+| `RowSizingMode` | Force standard-height single lines (default), fit rows per page, or leave rows unchanged |
 
 ## Testability
 

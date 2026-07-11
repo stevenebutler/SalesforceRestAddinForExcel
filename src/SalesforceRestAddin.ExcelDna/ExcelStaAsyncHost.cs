@@ -70,40 +70,87 @@ internal static class ExcelStaAsyncHost
         DataOperationProgressWindow? window = null;
         WpfUiThread.Run(() => window = new DataOperationProgressWindow(title, allowCancel));
 
-        void Report(OperationProgress progress)
+        var progressGate = new object();
+        var pendingProgress = OperationProgress.Status("Starting...");
+        var progressVersion = 0;
+        var progressDispatchScheduled = 0;
+
+        void ApplyLatestProgress()
         {
-            // WPF updates must stay on the dispatcher (ShowDialog is pumping it).
-            WpfUiThread.Run(() =>
+            while (true)
             {
-                if (window is null)
+                OperationProgress progress;
+                int appliedVersion;
+                lock (progressGate)
                 {
-                    return;
+                    progress = pendingProgress;
+                    appliedVersion = progressVersion;
                 }
 
-                if (progress.Completed is int completed)
+                // ExcelComThread has marshalled this action to the WPF/Excel STA. Keep
+                // the synchronous WPF helper inside that action, never on the REST worker.
+                WpfUiThread.Run(() =>
                 {
-                    window.SetProgress(progress.Message, completed, progress.Total);
-                }
-                else
-                {
-                    window.SetStatus(progress.Message);
-                }
-            });
+                    if (window is null)
+                    {
+                        return;
+                    }
 
-            // Never touch Excel COM from a thread-pool continuation (zombie EXCEL.EXE).
-            var status = progress.Message;
-            var truncated = status.Length > 128 ? status.Substring(0, 128) : status;
-            ExcelComThread.BeginInvoke(() =>
-            {
+                    if (progress.Completed is int completed)
+                    {
+                        window.SetProgress(progress.Message, completed, progress.Total);
+                    }
+                    else
+                    {
+                        window.SetStatus(progress.Message);
+                    }
+                });
+
                 try
                 {
-                    excel.StatusBar = truncated;
+                    var status = progress.Message;
+                    excel.StatusBar = status.Length > 128 ? status.Substring(0, 128) : status;
                 }
                 catch
                 {
                     // Excel may reject status bar updates during shutdown.
                 }
-            });
+
+                lock (progressGate)
+                {
+                    if (progressVersion == appliedVersion)
+                    {
+                        Interlocked.Exchange(ref progressDispatchScheduled, 0);
+                        return;
+                    }
+                }
+            }
+        }
+
+        void Report(OperationProgress progress)
+        {
+            lock (progressGate)
+            {
+                pendingProgress = progress;
+                progressVersion++;
+            }
+
+            if (Interlocked.Exchange(ref progressDispatchScheduled, 1) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                // Do not wait for progress/status UI: the dispatcher may currently be
+                // writing a query page to Excel, and the next queryMore must still start.
+                ExcelComThread.BeginInvoke(ApplyLatestProgress);
+            }
+            catch
+            {
+                // Shutdown can reject a pending dispatch; leave progress best-effort.
+                Interlocked.Exchange(ref progressDispatchScheduled, 0);
+            }
         }
 
         try

@@ -7,7 +7,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using SalesforceRestAddin.Core.DataPlane;
 using SalesforceRestAddin.Core.Rest;
 using SalesforceRestAddin.Core.Tables;
@@ -228,6 +230,18 @@ public sealed class TableQueryWizardWindow : Window
             case StepCriteria:
                 BuildCriteriaStep(contentStartRow: 1);
                 break;
+        }
+
+        if (step == StepFields && _fieldGrid is not null)
+        {
+            var fieldGrid = _fieldGrid;
+            Dispatcher.BeginInvoke(
+                DispatcherPriority.Input,
+                new Action(() =>
+                {
+                    fieldGrid.Focus();
+                    Keyboard.Focus(fieldGrid);
+                }));
         }
     }
 

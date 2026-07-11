@@ -21,6 +21,10 @@ namespace SalesforceRestAddin;
 
 public static class DataOperationHost
 {
+    // One queued response overlaps the current Excel write with the next queryMore request
+    // while keeping memory use and cancellation latency bounded. Raise only from measured data.
+    private const int QueryPageQueueCapacity = 1;
+
     private static readonly object GateLock = new();
     private static SessionGateComposer.SessionServices? _services;
     private static IConnectorOptionsStore? _optionsStore;
@@ -118,16 +122,18 @@ public static class DataOperationHost
         }
 
         DataOperationResult result;
+        TimeSpan apiElapsed;
+        var pageWrites = new PagedQueryWriteState(options.ColumnSizingMode, options.RowSizingMode);
         var queryStopwatch = Stopwatch.StartNew();
         try
         {
-            result = ExcelStaAsyncHost.Run(
+            var pagedResult = ExcelStaAsyncHost.Run(
                 "Query Table Data",
                 excel,
                 (ct, report) =>
                 {
                     report(OperationProgress.Status("Querying Salesforce..."));
-                    return QueryTableOperation.RunAsync(
+                    return RunPagedQueryAsync(
                         client,
                         new QueryTableInput
                         {
@@ -136,8 +142,13 @@ public static class DataOperationHost
                             ConfirmQueryTableDownload = !options.NoConfirmQueryDownload,
                             Progress = report,
                         },
+                        sheet,
+                        excel,
+                        pageWrites,
                         ct);
                 });
+            result = pagedResult.Result;
+            apiElapsed = pagedResult.ApiElapsed;
         }
         catch (OperationCanceledException)
         {
@@ -153,7 +164,12 @@ public static class DataOperationHost
         var applyStopwatch = Stopwatch.StartNew();
         try
         {
-            ApplyResult(sheet, result, binding: null, excel);
+            // A streamed success has already been applied page-by-page. Non-streamed
+            // reference joins and terminal error markers retain the existing result path.
+            if (!pageWrites.HasPages || result.ErrorSummary is not null)
+            {
+                ApplyResult(sheet, result, options, binding: null, excel);
+            }
         }
         finally
         {
@@ -164,13 +180,128 @@ public static class DataOperationHost
         {
             SetStatusBar(
                 excel,
-                QueryCompletionStatus.Build(result.RecordsProcessed, queryStopwatch.Elapsed, applyStopwatch.Elapsed));
+                QueryCompletionStatus.Build(
+                    result.RecordsProcessed,
+                    queryStopwatch.Elapsed,
+                    apiElapsed,
+                    pageWrites.ApplyElapsed + applyStopwatch.Elapsed));
+        }
+    }
+
+    private static async Task<PagedQueryResult> RunPagedQueryAsync(
+        SalesforceDataClient client,
+        QueryTableInput input,
+        ExcelWorksheet sheet,
+        ExcelApplication excel,
+        PagedQueryWriteState pageWrites,
+        CancellationToken cancellationToken)
+    {
+        var queue = new BoundedAsyncQueue<QueryTablePage>(QueryPageQueueCapacity);
+        // Do not let SemaphoreSlim release the consumer inline on the REST producer.
+        // The consumer blocks only its worker while ExcelComThread marshals COM to the STA.
+        var consumer = Task.Run(() => ConsumeQueryPagesAsync(queue, sheet, excel, pageWrites));
+        PagedQueryResult result;
+        try
+        {
+            result = await QueryTableOperation.RunPagedAsync(
+                client,
+                input,
+                (page, ct) => queue.EnqueueAsync(page, ct),
+                cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            queue.Complete();
+            // Always drain pages that were accepted before cancellation or a terminal
+            // producer failure. The consumer intentionally has no cancellation token.
+            await consumer.ConfigureAwait(false);
+        }
+
+        return result;
+    }
+
+    private static async Task ConsumeQueryPagesAsync(
+        BoundedAsyncQueue<QueryTablePage> queue,
+        ExcelWorksheet sheet,
+        ExcelApplication excel,
+        PagedQueryWriteState pageWrites)
+    {
+        while (true)
+        {
+            var next = await queue.TryDequeueAsync().ConfigureAwait(false);
+            if (!next.HasItem)
+            {
+                return;
+            }
+
+            var page = next.Item!;
+            var writeElapsed = TimeSpan.Zero;
+            ExcelComThread.Invoke(() =>
+            {
+                SessionFlowTrace.Log(
+                    $"QueryTable page {page.PageNumber}: Excel write start " +
+                    $"records={page.Projection.Values.GetLength(0)}");
+                var writeStopwatch = Stopwatch.StartNew();
+                try
+                {
+                    if (page.ClearBody is not null)
+                    {
+                        SetStatusBar(excel, "Clearing cells");
+                        SheetProjectionWriter.ClearBody(sheet, page.ClearBody);
+                    }
+
+                    if (page.TotalRowCount is int totalRowCount)
+                    {
+                        SetStatusBar(excel, "Formatting cells");
+                        SheetProjectionWriter.ApplyColumnFormatsToBody(
+                            sheet,
+                            page.Projection,
+                            totalRowCount);
+
+                        if (pageWrites.ColumnSizing == ColumnSizingMode.HeadersOnly)
+                        {
+                            SheetProjectionWriter.ApplyHeaderColumnSizing(sheet, page.Projection);
+                        }
+
+                        if (pageWrites.RowSizing == RowSizingMode.ForceSingleLine)
+                        {
+                            SheetProjectionWriter.ForceRowsToSingleLine(
+                                sheet,
+                                page.Projection,
+                                totalRowCount);
+                        }
+                    }
+
+                    SetStatusBar(excel, "Updating cells");
+                    SheetProjectionWriter.ApplyPage(
+                        sheet,
+                        page.Projection,
+                        applyColumnFormats: false,
+                        autoFitColumns: pageWrites.ShouldAutoFitColumns,
+                        rowSizingMode: pageWrites.RowSizing == RowSizingMode.FitEachPage
+                            ? RowSizingMode.FitEachPage
+                            : RowSizingMode.None,
+                        preserveExistingColumnWidths: pageWrites.ShouldPreserveExistingColumnWidths);
+                }
+                finally
+                {
+                    writeStopwatch.Stop();
+                    writeElapsed = writeStopwatch.Elapsed;
+                    SessionFlowTrace.Log(
+                        $"QueryTable page {page.PageNumber}: Excel write completed " +
+                        $"records={page.Projection.Values.GetLength(0)} " +
+                        $"elapsed={writeElapsed.TotalMilliseconds:0}ms");
+                }
+            });
+
+            pageWrites.RecordPage(writeElapsed);
         }
     }
 
     public static void ApplyResult(
         ExcelWorksheet sheet,
         DataOperationResult result,
+        ConnectorOptions options,
         ForceTableBinding? binding = null,
         ExcelApplication? excel = null)
     {
@@ -185,7 +316,11 @@ public static class DataOperationHost
             if (result.Projection is not null)
             {
                 SetStatusBar(excel, "Updating cells");
-                SheetProjectionWriter.Apply(sheet, result.Projection);
+                SheetProjectionWriter.Apply(
+                    sheet,
+                    result.Projection,
+                    options.ColumnSizingMode,
+                    options.RowSizingMode);
             }
 
             if (binding is not null && result.RowOutcomes.Count > 0)
@@ -241,6 +376,40 @@ public static class DataOperationHost
         catch
         {
             // Ignore status bar reset failures.
+        }
+    }
+
+    private sealed class PagedQueryWriteState
+    {
+        public PagedQueryWriteState(ColumnSizingMode columnSizingMode, RowSizingMode rowSizingMode)
+        {
+            ColumnSizing = columnSizingMode;
+            RowSizing = rowSizingMode;
+        }
+
+        public ColumnSizingMode ColumnSizing { get; }
+
+        public RowSizingMode RowSizing { get; }
+
+        public bool HasPages { get; private set; }
+
+        public bool ShouldAutoFitColumns =>
+            ColumnSizing == ColumnSizingMode.AllDownloadedData
+            || (ColumnSizing == ColumnSizingMode.FirstDownloadedPage && !HasPages);
+
+        public bool ShouldPreserveExistingColumnWidths =>
+            ColumnSizing == ColumnSizingMode.AllDownloadedData && HasPages;
+
+        public TimeSpan ApplyElapsed { get; private set; }
+
+        public void RecordPage(TimeSpan elapsed)
+        {
+            if (!HasPages)
+            {
+                HasPages = true;
+            }
+
+            ApplyElapsed += elapsed;
         }
     }
 }

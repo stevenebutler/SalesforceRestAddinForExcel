@@ -20,6 +20,8 @@ public sealed class JsonConnectorOptionsStoreTests
         await Assert.That(loaded.NoQueryLimit).IsFalse();
         await Assert.That(loaded.AutoAssignRule).IsFalse();
         await Assert.That(loaded.IncludeHiddenCells).IsFalse();
+        await Assert.That(loaded.ColumnSizingMode).IsEqualTo(ColumnSizingMode.FirstDownloadedPage);
+        await Assert.That(loaded.RowSizingMode).IsEqualTo(RowSizingMode.ForceSingleLine);
         await Assert.That(loaded.CompositeBatchSize).IsEqualTo(200);
         await Assert.That(loaded.SendPreventAutoAssignHeader).IsTrue();
     }
@@ -33,21 +35,24 @@ public sealed class JsonConnectorOptionsStoreTests
 
         await Assert.That(loaded.AutoAssignRule).IsFalse();
         await Assert.That(loaded.IncludeHiddenCells).IsFalse();
+        await Assert.That(loaded.ColumnSizingMode).IsEqualTo(ColumnSizingMode.FirstDownloadedPage);
+        await Assert.That(loaded.RowSizingMode).IsEqualTo(RowSizingMode.ForceSingleLine);
 
         File.Delete(path);
     }
 
     [Test]
-    public async Task Load_OmittedAndInvalidValues_UseDefaults()
+    public async Task Load_OmittedValues_UseDefaults()
     {
         var path = WriteTemp(
             """
             {
               "useReference": true,
-              "noWarning": null,
-              "noQueryLimit": "yes",
-              "autoAssignRule": 1,
-              "includeHiddenCells": false
+              "noWarning": false,
+              "noQueryLimit": false,
+              "autoAssignRule": false,
+              "includeHiddenCells": false,
+              "disableAutomaticSizing": true
             }
             """);
 
@@ -58,6 +63,8 @@ public sealed class JsonConnectorOptionsStoreTests
         await Assert.That(loaded.NoQueryLimit).IsFalse();
         await Assert.That(loaded.AutoAssignRule).IsFalse();
         await Assert.That(loaded.IncludeHiddenCells).IsFalse();
+        await Assert.That(loaded.ColumnSizingMode).IsEqualTo(ColumnSizingMode.FirstDownloadedPage);
+        await Assert.That(loaded.RowSizingMode).IsEqualTo(RowSizingMode.ForceSingleLine);
 
         File.Delete(path);
     }
@@ -115,15 +122,18 @@ public sealed class JsonConnectorOptionsStoreTests
     }
 
     [Test]
-    public async Task Load_InvalidJson_ReturnsAllDefaults()
+    public async Task Load_InvalidJson_ReturnsAllDefaults_And_LogsWarning()
     {
         var path = WriteTemp("not-json");
+        var warnings = new List<string>();
 
-        var loaded = new JsonConnectorOptionsStore(path).Load();
+        var loaded = new JsonConnectorOptionsStore(path, warnings.Add).Load();
 
         await Assert.That(loaded.UseReference).IsFalse();
-        await Assert.That(loaded.AutoAssignRule).IsFalse();
-        await Assert.That(loaded.IncludeHiddenCells).IsFalse();
+        await Assert.That(loaded.ColumnSizingMode).IsEqualTo(ColumnSizingMode.FirstDownloadedPage);
+        await Assert.That(loaded.RowSizingMode).IsEqualTo(RowSizingMode.ForceSingleLine);
+        await Assert.That(warnings.Count).IsEqualTo(1);
+        await Assert.That(warnings[0]).Contains("settings JSON is invalid");
 
         File.Delete(path);
     }
@@ -141,6 +151,8 @@ public sealed class JsonConnectorOptionsStoreTests
             NoQueryLimit = true,
             AutoAssignRule = true,
             IncludeHiddenCells = true,
+            ColumnSizingMode = ColumnSizingMode.HeadersOnly,
+            RowSizingMode = RowSizingMode.ForceSingleLine,
         };
 
         store.Save(saved);
@@ -152,6 +164,8 @@ public sealed class JsonConnectorOptionsStoreTests
         await Assert.That(loaded.NoQueryLimit).IsTrue();
         await Assert.That(loaded.AutoAssignRule).IsTrue();
         await Assert.That(loaded.IncludeHiddenCells).IsTrue();
+        await Assert.That(loaded.ColumnSizingMode).IsEqualTo(ColumnSizingMode.HeadersOnly);
+        await Assert.That(loaded.RowSizingMode).IsEqualTo(RowSizingMode.ForceSingleLine);
         await Assert.That(loaded.SendPreventAutoAssignHeader).IsFalse();
 
         File.Delete(path);
@@ -168,6 +182,48 @@ public sealed class JsonConnectorOptionsStoreTests
 
         await Assert.That(loaded.AutoAssignRule).IsFalse();
         await Assert.That(loaded.SendPreventAutoAssignHeader).IsTrue();
+
+        File.Delete(path);
+    }
+
+    [Test]
+    public async Task Load_MissingSizingModes_UsesDefaults_And_IgnoresLegacySizingSetting()
+    {
+        var path = WriteTemp(
+            """
+            {
+              "disableAutomaticSizing": true
+            }
+            """);
+
+        var loaded = new JsonConnectorOptionsStore(path).Load();
+
+        await Assert.That(loaded.ColumnSizingMode).IsEqualTo(ColumnSizingMode.FirstDownloadedPage);
+        await Assert.That(loaded.RowSizingMode).IsEqualTo(RowSizingMode.ForceSingleLine);
+
+        File.Delete(path);
+    }
+
+    [Test]
+    public async Task Load_InvalidSizingModes_DefaultsOnlyThoseSettings_And_LogsOneWarning()
+    {
+        var path = WriteTemp(
+            """
+            {
+              "useReference": true,
+              "columnSizingMode": "futureMode",
+              "rowSizingMode": 2
+            }
+            """);
+        var warnings = new List<string>();
+
+        var loaded = new JsonConnectorOptionsStore(path, warnings.Add).Load();
+
+        await Assert.That(loaded.UseReference).IsTrue();
+        await Assert.That(loaded.ColumnSizingMode).IsEqualTo(ColumnSizingMode.FirstDownloadedPage);
+        await Assert.That(loaded.RowSizingMode).IsEqualTo(RowSizingMode.ForceSingleLine);
+        await Assert.That(warnings.Count).IsEqualTo(1);
+        await Assert.That(warnings[0]).Contains("columnSizingMode, rowSizingMode");
 
         File.Delete(path);
     }

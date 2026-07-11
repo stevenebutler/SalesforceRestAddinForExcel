@@ -18,7 +18,8 @@ public static class WizardTableLayoutWriter
         int startColumn,
         SObjectDescribe describe,
         IReadOnlyList<FieldDescriptor> fields,
-        IReadOnlyList<WizardCriteriaClause>? criteria = null)
+        IReadOnlyList<WizardCriteriaClause>? criteria = null,
+        AutomaticSizingMode automaticSizingMode = AutomaticSizingMode.Width)
     {
         if (worksheet is null)
         {
@@ -69,6 +70,8 @@ public static class WizardTableLayoutWriter
         var separatorTop = (Range)worksheet.Cells[startRow, separatorColumn];
         var separatorBottom = (Range)worksheet.Cells[headerRow, separatorColumn];
         worksheet.Range[separatorTop, separatorBottom].Clear();
+
+        ApplySizing(worksheet, startRow, startColumn, fields.Count, criteria?.Count ?? 0, automaticSizingMode);
     }
 
     /// <summary>
@@ -171,5 +174,32 @@ public static class WizardTableLayoutWriter
         {
             cell.Comment.Shape.TextFrame.AutoSize = true;
         }
+    }
+
+    private static void ApplySizing(
+        Worksheet worksheet,
+        int startRow,
+        int startColumn,
+        int fieldCount,
+        int criteriaCount,
+        AutomaticSizingMode automaticSizingMode)
+    {
+        if (automaticSizingMode == AutomaticSizingMode.None)
+        {
+            return;
+        }
+
+        var widthEndColumn = startColumn + Math.Max(fieldCount - 1, Math.Max(0, criteriaCount * 3));
+        var widthStart = (Range)worksheet.Cells[startRow, startColumn];
+        var widthEnd = (Range)worksheet.Cells[startRow + 1, widthEndColumn];
+        var widthRange = worksheet.Range[widthStart, widthEnd];
+        widthRange.Columns.AutoFit();
+
+        if (automaticSizingMode != AutomaticSizingMode.Both)
+        {
+            return;
+        }
+
+        widthRange.Rows.AutoFit();
     }
 }

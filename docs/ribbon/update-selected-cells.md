@@ -36,8 +36,9 @@ Both paths must produce identical Salesforce payloads for the same visible data 
 
 ### FR-USC-3 Confirmation
 
-- **Default (skip hidden):** no confirmation.
-- **Include-hidden path:** confirm unless `NoWarning` — warn that hidden rows/columns in the selection will be updated.
+- Confirm every update unless `NoWarning` is true.
+- **Default (skip hidden):** confirm the selected record count and object.
+- **Include-hidden path:** use confirmation wording that warns hidden rows/columns in the selection will be updated.
 
 ### FR-USC-4 Record construction
 
