@@ -29,7 +29,7 @@ Map to [`ConnectorOptions`](../../src/SalesforceRestAddin.Core/Session/Connector
 | UI label | Property | Default | Affects |
 |----------|----------|---------|---------|
 | Use Reference Name/Id | `UseReference` | false | Reference field read/write in query/update/insert |
-| Do not show warning dialogs before commencing operations. | `NoWarning` | false | Skip insert confirm; skip include-hidden update confirm |
+| Do not warn before insert or hidden-update operations. | `NoWarning` | false | Skip insert confirm; skip include-hidden update confirm |
 | Do not confirm Query Table downloads. | `NoConfirmQueryDownload` | false | When unchecked (default), Query Table Data runs COUNT + confirm before download |
 | No Query Limit | `NoQueryLimit` | false | Skip 3,500 row / 20 col caps on query-rows, delete, update limits |
 | Enable Auto Assign Rule | `AutoAssignRule` | false | When false (default), send `Sforce-Auto-Assign: FALSE` on create/update |

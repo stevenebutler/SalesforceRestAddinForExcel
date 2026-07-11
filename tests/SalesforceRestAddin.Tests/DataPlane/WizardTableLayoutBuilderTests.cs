@@ -389,4 +389,36 @@ public sealed class WizardTableLayoutBuilderTests
             "Read-only (custom)",
         ]);
     }
+
+    [Test]
+    public async Task T_WIZ_04g_Bucket_Display_Labels_Are_One_Based()
+    {
+        await Assert.That(WizardTableLayoutBuilder.BucketDisplayLabel(0)).IsEqualTo("1 Id");
+        await Assert.That(WizardTableLayoutBuilder.BucketDisplayLabel(1)).IsEqualTo("2 Name");
+        await Assert.That(WizardTableLayoutBuilder.BucketDisplayLabel(7)).IsEqualTo("8 Read-only (custom)");
+    }
+
+    [Test]
+    public async Task T_WIZ_05_Criteria_Row_Values_Are_Contiguous_Triplets()
+    {
+        var describe = DescribeFixtures.LoadAccountDescribe();
+        var id = describe.Fields.First(f => f.IsId);
+        var name = describe.Fields.First(f => string.Equals(f.Name, "Name", StringComparison.OrdinalIgnoreCase));
+        var criteria = new[]
+        {
+            new WizardCriteriaClause { Field = id, Operator = "not equals", Value = string.Empty },
+            new WizardCriteriaClause { Field = name, Operator = "equals", Value = "Acme" },
+        };
+
+        var values = WizardTableLayoutBuilder.BuildCriteriaRowValues(criteria);
+
+        await Assert.That(values.GetLength(0)).IsEqualTo(1);
+        await Assert.That(values.GetLength(1)).IsEqualTo(6);
+        await Assert.That(values[0, 0]).IsEqualTo(id.Label);
+        await Assert.That(values[0, 1]).IsEqualTo("not equals");
+        await Assert.That(values[0, 2]).IsEqualTo(string.Empty);
+        await Assert.That(values[0, 3]).IsEqualTo(name.Label);
+        await Assert.That(values[0, 4]).IsEqualTo("equals");
+        await Assert.That(values[0, 5]).IsEqualTo("Acme");
+    }
 }

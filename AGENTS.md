@@ -48,7 +48,7 @@ SalesforceRestAddinForExcel.sln
 
 **Windows.Ui** is **WPF in C# only** (no XAML — see [ui-platform.md](docs/ribbon/ui-platform.md)) for dialogs. **WebView2** (`OAuthWebViewWindow`) is used only for the OAuth authorization redirect. **No WinForms** in `src/`.
 
-**Tests** run on `net10.0` via `./dev.sh test`. Prefer test-first for Core behavior. See **Unit tests** below for determinism rules.
+**Tests** run on `net10.0` via `./dev.sh test`. Prefer test-first for Core behavior. After any code or test change, rerun the full suite with `./dev.sh test` before finishing. Filtered runs should be avoided except for initial test discovery. See **Unit tests** below for determinism rules.
 
 ## Intentionally out of scope
 
@@ -142,12 +142,12 @@ In `SalesforceRestAddin.ExcelDna-AddIn.dna`:
 
 ## Unit tests (TUnit)
 
-Tests are **TUnit** on `net10.0` via `./dev.sh test` (container entrypoint already inserts `--` before args passed to the test app). Prefer the full suite after Core changes; filter only when iterating on a known class.
+Tests are **TUnit** on `net10.0` via `./dev.sh test` (container entrypoint already inserts `--` before args passed to the test app). Any change that needs validation must be followed by a full `./dev.sh test` run. Avoid filtered runs unless you are only discovering the exact test name or namespace.
 
 ### Do / don't
 
 ```bash
-# Good — full suite
+# Good — full suite after any change
 ./dev.sh test
 
 # Good — list method names (discover filters)
@@ -168,10 +168,11 @@ Tests are **TUnit** on `net10.0` via `./dev.sh test` (container entrypoint alrea
 
 ### Filter tips
 
-1. Prefer `--list-tests` first, then build a `--treenode-filter` from the printed names / namespaces.
+1. Prefer `--list-tests` only for discovery when you do not yet know the exact test name or namespace.
 2. Typical shape: `/*/AssemblyName/NamespaceSegment/ClassName/*` (wildcards for assembly/namespace segments that vary).
 3. Exit code **8** with `Zero tests ran` usually means the treenode filter matched nothing — fix the path, don't assume the suite failed.
-4. Assertions on `(byte R, byte G, byte B)`: compare with `((byte)…, (byte)…, (byte)…)` — bare `(189, 215, 238)` is `(int,int,int)` and TUnit will throw on implicit conversion.
+4. Do not use filtered runs as the final verification step for a change.
+5. Assertions on `(byte R, byte G, byte B)`: compare with `((byte)…, (byte)…, (byte)…)` — bare `(189, 215, 238)` is `(int,int,int)` and TUnit will throw on implicit conversion.
 
 ## Quick commands
 

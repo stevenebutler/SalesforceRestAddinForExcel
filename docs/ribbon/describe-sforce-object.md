@@ -23,6 +23,8 @@ User picks one or more Salesforce objects; add-in creates a **new worksheet per 
 ### FR-DSO-2 Object selection UI
 
 - WPF modal window listing queryable objects (search/filter) — `DescribeObjectPickerWindow` in `SalesforceRestAddin.Windows.Ui`.
+- The picker uses a WPF grid with the same shared sort rule as the object picker elsewhere in the add-in.
+- The dialog keeps a visible footer with `OK` and `Cancel` buttons even when the list is short.
 - User may select **multiple** objects.
 - No translation language picker — Translation Helper / METAAPI is out of scope ([AGENTS.md](../../AGENTS.md)).
 

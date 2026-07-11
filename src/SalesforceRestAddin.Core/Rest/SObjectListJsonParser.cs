@@ -16,6 +16,11 @@ public static class SObjectListJsonParser
                 Label = element.GetProperty("label").GetString() ?? string.Empty,
                 Queryable = element.TryGetProperty("queryable", out var q) && q.GetBoolean(),
                 Custom = element.TryGetProperty("custom", out var c) && c.GetBoolean(),
+                CustomSetting = element.TryGetProperty("customSetting", out var cs) && cs.GetBoolean(),
+                DeprecatedAndHidden = element.TryGetProperty("deprecatedAndHidden", out var d) && d.GetBoolean(),
+                AssociateEntityType = element.TryGetProperty("associateEntityType", out var aet) ? aet.GetString() : null,
+                AssociateParentEntity = element.TryGetProperty("associateParentEntity", out var ape) ? ape.GetString() : null,
+                KeyPrefix = element.TryGetProperty("keyPrefix", out var kp) ? kp.GetString() : null,
             });
         }
 

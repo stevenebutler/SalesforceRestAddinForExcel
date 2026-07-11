@@ -32,7 +32,7 @@ public sealed class OptionsWindow : Window
 
         var root = new StackPanel { Margin = new Thickness(16) };
         _useReference = MakeCheck("Use Reference Name/Id", current.UseReference);
-        _noWarning = MakeCheck("Do not show warning dialogs before commencing operations.", current.NoWarning);
+        _noWarning = MakeCheck("Do not warn before insert or hidden-update operations.", current.NoWarning);
         _noConfirmQueryDownload = MakeCheck("Do not confirm Query Table downloads.", current.NoConfirmQueryDownload);
         _noQueryLimit = MakeCheck("No Query Limit", current.NoQueryLimit);
         _autoAssignRule = MakeCheck("Enable Auto Assign Rule", current.AutoAssignRule);

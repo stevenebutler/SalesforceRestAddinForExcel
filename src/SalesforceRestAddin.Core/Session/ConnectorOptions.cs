@@ -13,7 +13,7 @@ public sealed class ConnectorOptions
     /// <summary>Resolve Salesforce names ↔ ids (<c>UseReference</c>).</summary>
     public bool UseReference { get; init; }
 
-    /// <summary>Skip bulk-operation confirmation dialogs (<c>NoWarn</c>).</summary>
+    /// <summary>Skip insert and include-hidden update confirmation dialogs (<c>NoWarning</c>).</summary>
     public bool NoWarning { get; init; }
 
     /// <summary>

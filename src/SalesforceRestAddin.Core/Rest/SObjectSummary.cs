@@ -9,4 +9,14 @@ public sealed class SObjectSummary
     public bool Queryable { get; init; }
 
     public bool Custom { get; init; }
+
+    public bool CustomSetting { get; init; }
+
+    public bool DeprecatedAndHidden { get; init; }
+
+    public string? AssociateEntityType { get; init; }
+
+    public string? AssociateParentEntity { get; init; }
+
+    public string? KeyPrefix { get; init; }
 }

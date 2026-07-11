@@ -186,6 +186,7 @@ WPF wizard in `SalesforceRestAddin.Windows.Ui`. Core helpers only:
 
 - Field ordering for row 2 (Id → Name → Required (std/custom) → Standard → Custom → Read-only (std/custom))
 - Default WHERE when no clauses
+- Shared grid sort state for the object picker and field picker: promote clicked column to the front, sort ascending the first time, toggle only the current first column on repeat click
 - Calls `QueryTable` at the end — no second implementation
 
 ---

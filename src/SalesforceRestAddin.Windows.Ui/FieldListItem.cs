@@ -10,23 +10,42 @@ namespace SalesforceRestAddin.Windows.Ui;
 /// </summary>
 internal sealed class FieldListItem
 {
-    public FieldListItem(FieldDescriptor field)
+    public FieldListItem(FieldDescriptor field, int describeIndex)
     {
         Field = field;
+        DescribeIndex = describeIndex;
+        Bucket = WizardTableLayoutBuilder.GetFieldBucket(field);
         DisplayText = WizardTableLayoutBuilder.FormatFieldListDisplay(field);
+        CategoryText = WizardTableLayoutBuilder.BucketDisplayLabel(Bucket);
+        LabelText = field.Label;
+        ApiName = field.Name;
         ToolTipText = FormatToolTip(field);
-        var (r, g, b) = WizardTableLayoutBuilder.HeaderFillRgb(WizardTableLayoutBuilder.GetFieldBucket(field));
-        RowBackground = new SolidColorBrush(Color.FromRgb(r, g, b));
-        RowBackground.Freeze();
+        var (r, g, b) = WizardTableLayoutBuilder.HeaderFillRgb(Bucket);
+        CategoryBackground = new SolidColorBrush(Color.FromRgb(r, g, b));
+        CategoryBackground.Freeze();
     }
 
     public FieldDescriptor Field { get; }
 
+    public int DescribeIndex { get; }
+
+    public int Bucket { get; }
+
     public string DisplayText { get; }
+
+    public string CategoryText { get; }
+
+    public string LabelText { get; }
+
+    public string ApiName { get; }
 
     public string ToolTipText { get; }
 
-    public Brush RowBackground { get; }
+    public Brush CategoryBackground { get; }
+
+    public Brush CategoryForeground => Brushes.Black;
+
+    public Brush RowBackground => CategoryBackground;
 
     public override string ToString() => DisplayText;
 

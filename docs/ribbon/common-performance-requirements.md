@@ -165,7 +165,7 @@ Prefer recording errors in a Core result DTO; ExcelDna applies visuals in one pa
 | Option | Effect |
 |--------|--------|
 | `UseReference` | Name ↔ Id for reference fields |
-| `NoWarning` | Skip optional confirmation dialogs (insert; include-hidden update) |
+| `NoWarning` | Skip insert and include-hidden update confirmation dialogs |
 | `NoQueryLimit` | Skip maxRows/maxCols checks |
 | `AutoAssignRule` | When false, suppress auto-assignment header |
 | `IncludeHiddenCells` | When false (default), update omits hidden rows/columns; when true, include them |

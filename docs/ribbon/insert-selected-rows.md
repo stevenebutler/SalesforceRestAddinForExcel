@@ -25,7 +25,7 @@ POST new Salesforce records for selected table rows whose Id cell contains **`Ne
 
 ### FR-ISR-2 Confirmation
 
-- Confirm before processing **unless** `NoWarning` is set (Options: *Do not show warning dialogs before commencing operations.*):
+- Confirm before processing **unless** `NoWarning` is set (Options: *Do not warn before insert or hidden-update operations.*):
   - *“Insert N record(s) into {ObjectLabel}?”* (N = selected row count, not “New” row count; singular/plural as appropriate).
 - When `NoWarning` is true → skip the dialog and proceed.
 - Cancel → no API calls.

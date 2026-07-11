@@ -109,20 +109,22 @@ public static class WizardTableLayoutWriter
         int startColumn,
         IReadOnlyList<WizardCriteriaClause> criteria)
     {
-        var column = startColumn + 1;
+        var values = WizardTableLayoutBuilder.BuildCriteriaRowValues(criteria);
+        var valueCount = values.GetLength(1);
+        if (valueCount == 0)
+        {
+            return;
+        }
+
+        var headerStart = (Range)worksheet.Cells[startRow, startColumn + 1];
+        var headerEnd = (Range)worksheet.Cells[startRow, startColumn + valueCount];
+        worksheet.Range[headerStart, headerEnd].Value2 = values;
+
         for (var i = 0; i < criteria.Count; i++)
         {
             var clause = criteria[i];
-            var fieldCell = (Range)worksheet.Cells[startRow, column++];
-            fieldCell.Value2 = clause.Field.Label;
+            var fieldCell = (Range)worksheet.Cells[startRow, startColumn + 1 + (i * 3)];
             ReplaceComment(fieldCell, clause.Field.Name);
-
-            ((Range)worksheet.Cells[startRow, column++]).Value2 = clause.Operator;
-            ((Range)worksheet.Cells[startRow, column++]).Value2 = clause.Value ?? string.Empty;
-            if (i < criteria.Count - 1)
-            {
-                ((Range)worksheet.Cells[startRow, column++]).Value2 = "and";
-            }
         }
     }
 

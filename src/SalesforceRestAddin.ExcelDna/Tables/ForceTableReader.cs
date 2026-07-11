@@ -1,6 +1,8 @@
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
+using SalesforceRestAddin.Core.Session;
 using SalesforceRestAddin.Core.Tables;
 using Microsoft.Office.Interop.Excel;
 
@@ -53,7 +55,9 @@ public static class ForceTableReader
             headerSheetRow = 2;
         }
 
+        var headerValueStopwatch = Stopwatch.StartNew();
         var headerMap = ReadHeaderRowMap(worksheet, headerSheetRow, regionStartColumn, regionColumnCount);
+        headerValueStopwatch.Stop();
         // Also probe a few columns left of the region in case CurrentRegion started mid-table
         // after a blank body cell — rare, but left-scan needs those headers.
         ExtendHeaderMapLeft(worksheet, headerSheetRow, headerMap, regionStartColumn, activeColumn);
@@ -83,7 +87,12 @@ public static class ForceTableReader
             worksheet.Cells[Math.Max(startRow + 1, regionStartRow + regionRowCount - 1), startColumn + columnCount - 1]];
 
         var headerLabels = ReadRow(table, 2, columnCount);
+        var headerCommentStopwatch = Stopwatch.StartNew();
         var headerApiNames = ReadHeaderApiNames(table, columnCount);
+        headerCommentStopwatch.Stop();
+        SessionFlowTrace.Log(
+            $"ForceTableReader: header row read values={headerValueStopwatch.ElapsedMilliseconds}ms " +
+            $"comments={headerCommentStopwatch.ElapsedMilliseconds}ms");
         var bodyRowCount = Math.Max(0, table.Rows.Count - 2);
         var body = ReadBody(table, bodyRowCount, columnCount);
         var criteriaRow = ReadCriteriaRow(table, columnCount);

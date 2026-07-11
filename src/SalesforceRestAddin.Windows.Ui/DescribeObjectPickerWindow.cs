@@ -1,48 +1,25 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using SalesforceRestAddin.Core.DataPlane;
 using SalesforceRestAddin.Core.Rest;
 
 namespace SalesforceRestAddin.Windows.Ui;
 
 public sealed class DescribeObjectPickerWindow : Window
 {
-    private readonly ListBox _list;
+    private readonly ObjectPickerControl _picker;
 
     public DescribeObjectPickerWindow(IReadOnlyList<SObjectSummary> objects)
     {
         Title = "Describe Sforce Object";
-        Width = 520;
+        Width = 720;
         Height = 480;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
-        var filter = new TextBox { Margin = new Thickness(16, 16, 16, 8) };
-        _list = UiListBox.Create(SelectionMode.Extended);
-        _list.Margin = new Thickness(16, 0, 16, 8);
-
-        var items = objects
-            .Where(o => o.Queryable)
-            .OrderBy(o => o.Label, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        foreach (var item in items)
-        {
-            _list.Items.Add(new SObjectListItem(item));
-        }
-
-        filter.TextChanged += (_, _) =>
-        {
-            var text = filter.Text.Trim();
-            _list.Items.Clear();
-            foreach (var item in items.Where(i =>
-                         string.IsNullOrEmpty(text)
-                         || i.Label.Contains(text, StringComparison.OrdinalIgnoreCase)
-                         || i.Name.Contains(text, StringComparison.OrdinalIgnoreCase)))
-            {
-                _list.Items.Add(new SObjectListItem(item));
-            }
-        };
+        _picker = new ObjectPickerControl(objects, SelectionMode.Extended);
+        _picker.Margin = new Thickness(16, 16, 16, 0);
 
         var buttons = new StackPanel
         {
@@ -50,22 +27,23 @@ public sealed class DescribeObjectPickerWindow : Window
             HorizontalAlignment = HorizontalAlignment.Right,
             Margin = new Thickness(16),
         };
-        var ok = new Button { Content = "OK", Width = 80, Margin = new Thickness(0, 0, 8, 0) };
-        var cancel = new Button { Content = "Cancel", Width = 80 };
+        var ok = new Button { Content = "OK", Width = 80, Margin = new Thickness(0, 0, 8, 0), IsDefault = true };
+        var cancel = new Button { Content = "Cancel", Width = 80, IsCancel = true };
         ok.Click += (_, _) => { DialogResult = true; Close(); };
         cancel.Click += (_, _) => { DialogResult = false; Close(); };
         buttons.Children.Add(ok);
         buttons.Children.Add(cancel);
 
-        var root = new DockPanel();
-        DockPanel.SetDock(buttons, Dock.Bottom);
-        DockPanel.SetDock(filter, Dock.Top);
+        var root = new Grid();
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        Grid.SetRow(_picker, 0);
+        Grid.SetRow(buttons, 1);
+        root.Children.Add(_picker);
         root.Children.Add(buttons);
-        root.Children.Add(filter);
-        root.Children.Add(_list);
         Content = root;
     }
 
     public IReadOnlyList<string> GetSelectedApiNames() =>
-        _list.SelectedItems.Cast<SObjectListItem>().Select(i => i.Summary.Name).ToList();
+        _picker.SelectedApiNames;
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -117,6 +118,7 @@ public static class DataOperationHost
         }
 
         DataOperationResult result;
+        var queryStopwatch = Stopwatch.StartNew();
         try
         {
             result = ExcelStaAsyncHost.Run(
@@ -143,8 +145,27 @@ public static class DataOperationHost
             SessionFlowTrace.Log("Query Table Data: cancelled by user.");
             return;
         }
+        finally
+        {
+            queryStopwatch.Stop();
+        }
 
-        ApplyResult(sheet, result, binding: null, excel);
+        var applyStopwatch = Stopwatch.StartNew();
+        try
+        {
+            ApplyResult(sheet, result, binding: null, excel);
+        }
+        finally
+        {
+            applyStopwatch.Stop();
+        }
+
+        if (result.Succeeded)
+        {
+            SetStatusBar(
+                excel,
+                QueryCompletionStatus.Build(result.RecordsProcessed, queryStopwatch.Elapsed, applyStopwatch.Elapsed));
+        }
     }
 
     public static void ApplyResult(

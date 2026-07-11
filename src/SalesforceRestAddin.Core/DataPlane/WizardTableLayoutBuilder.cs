@@ -28,6 +28,22 @@ public static class WizardTableLayoutBuilder
     public static object?[] BuildHeaderRowLabels(IReadOnlyList<FieldDescriptor> fields) =>
         fields.Select(static f => (object?)f.Label).ToArray();
 
+    /// <summary>Row 1 criteria cells written contiguously as field/operator/value triplets.</summary>
+    public static object?[,] BuildCriteriaRowValues(IReadOnlyList<WizardCriteriaClause> criteria)
+    {
+        var values = new object?[1, criteria.Count * 3];
+        for (var i = 0; i < criteria.Count; i++)
+        {
+            var clause = criteria[i];
+            var column = i * 3;
+            values[0, column] = clause.Field.Label;
+            values[0, column + 1] = clause.Operator;
+            values[0, column + 2] = clause.Value ?? string.Empty;
+        }
+
+        return values;
+    }
+
     /// <summary>Required on create: non-nillable and createable (bugs.md #8 / FR-TQW-6).</summary>
     public static bool IsRequiredOnCreate(FieldDescriptor field) =>
         !field.Nillable && field.Createable;
@@ -87,6 +103,9 @@ public static class WizardTableLayoutBuilder
             7 => "Read-only (custom)",
             _ => string.Empty,
         };
+
+    public static string BucketDisplayLabel(int bucket) =>
+        $"{bucket + 1} {BucketLegendLabel(bucket)}";
 
     /// <summary>
     /// Soft pastel fills for wizard header columns, field-list rows, and legend (readable with bold black text).

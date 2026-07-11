@@ -42,10 +42,19 @@ Guided flow: Excel **InputBox** for the sheet anchor → WPF steps (object → f
 
 - `DescribeSObject` for chosen object.
 - Multi-select fields; **Record Id** (Salesforce primary key) is **required**, **non-deselectable** in the UI, and always included in the result set.
-- Field list display: `{Label} ({ApiName})` only (no `[req]` / `[ro]` / `[lk]` flags).
-- Each field row uses the same pastel fill as its FR-TQW-6 bucket; a display-only **Legend** lists all eight buckets with those fills.
+- The field picker is a sortable grid with columns `Category`, `Label`, and `API Name`.
+- `Category` is shown as a one-based visual label such as `1 Id`, `2 Name`, etc. The underlying bucket order remains zero-based in Core.
+- Category cells keep their bucket fill and black text even when the row is selected.
+- Field list display remains `{Label} ({ApiName})` in the row data, but the grid exposes the label and API name separately for sorting and filtering.
+- The old side legend was removed; bucket information is encoded directly in the category column.
 - Show destination cell at the top.
 - **Back** → object step; **Cancel** → exit.
+
+Grid sorting follows the shared rule used by other WPF pickers:
+
+- clicking a non-first column promotes it to the front and sorts ascending the first time
+- clicking the current first column toggles that column between ascending and descending
+- clicking another column preserves the remaining secondary sort keys
 
 ### FR-TQW-5 Step 3 — Query clauses
 
@@ -70,7 +79,7 @@ Write column headers starting at the **same column as the row 1 object cell**. W
 | 6 | Read-only (standard) | gray |
 | 7 | Read-only (custom) | darker gray |
 
-Required on create = `nillable == false` and createable. The same eight labels and fills are used for sheet headers, the field-list row backgrounds, and the step-2 legend.
+Required on create = `nillable == false` and createable. The same eight labels and fills are used for sheet headers and the step-2 category column.
 
 Per header cell:
 

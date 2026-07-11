@@ -31,6 +31,14 @@ internal static class UiListBox
         return style;
     }
 
+    public static Style CreateStretchingPaddedItemStyle()
+    {
+        var style = CreatePaddedItemStyle();
+        style.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Stretch));
+        style.Setters.Add(new Setter(Control.VerticalContentAlignmentProperty, VerticalAlignment.Stretch));
+        return style;
+    }
+
     /// <summary>
     /// Field picker: tooltip = Salesforce type; row background from bucket fill.
     /// </summary>
