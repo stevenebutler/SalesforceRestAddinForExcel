@@ -83,6 +83,14 @@ public sealed class SoqlQueryBuilderTests
     }
 
     [Test]
+    public async Task T_SOQL_12b_Legacy_Record_Id_Label_Resolves_Id()
+    {
+        var result = await ParseAsync("Record Id", "not equals", "");
+
+        await Assert.That(result.WhereClause).IsEqualTo("Id != ''");
+    }
+
+    [Test]
     public async Task T_SOQL_13_Select_Field_Order_Matches_Binding()
     {
         var binding = ForceTableBinder.Bind(ForceTableSnapshots.ValidAccountTable(), DescribeFixtures.LoadAccountDescribe()).Binding!;

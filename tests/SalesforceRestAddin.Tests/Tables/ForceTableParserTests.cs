@@ -76,6 +76,25 @@ public sealed class ForceTableParserTests
     }
 
     [Test]
+    public async Task T_TBL_05b_Record_Id_Header_Without_Comment_Maps_To_Id()
+    {
+        var snapshot = new ForceTableSnapshot
+        {
+            ObjectApiName = "Account",
+            CriteriaRow = Array.Empty<object?>(),
+            HeaderLabels = new object?[] { "Record Id", "Account Name" },
+            HeaderApiNames = new string?[] { null, "Name" },
+            Body = new object?[0, 2],
+        };
+
+        var result = ForceTableBinder.Bind(snapshot, AccountDescribe);
+
+        await Assert.That(result.Succeeded).IsTrue();
+        await Assert.That(result.Binding!.Columns[0].Field.Name).IsEqualTo("Id");
+        await Assert.That(result.Binding.IdColumnIndex).IsEqualTo(0);
+    }
+
+    [Test]
     public async Task T_TBL_06_No_Id_Column_Validation_Error()
     {
         var snapshot = ForceTableSnapshots.MissingIdColumn();

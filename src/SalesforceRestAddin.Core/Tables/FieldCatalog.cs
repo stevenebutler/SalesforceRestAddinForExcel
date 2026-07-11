@@ -2,6 +2,8 @@ namespace SalesforceRestAddin.Core.Tables;
 
 public sealed class FieldCatalog
 {
+    private const string LegacyRecordIdLabel = "Record Id";
+
     private readonly Dictionary<string, FieldDescriptor> _byApiName;
     private readonly Dictionary<string, FieldDescriptor> _byLabel;
 
@@ -37,6 +39,11 @@ public sealed class FieldCatalog
 
     public FieldDescriptor? ResolveHeaderField(string? label, string? apiNameFromComment)
     {
+        if (IsLegacyRecordIdLabel(label) && TryGetByApiName("Id", out var legacyId))
+        {
+            return legacyId;
+        }
+
         if (apiNameFromComment is not null
             && !string.IsNullOrWhiteSpace(apiNameFromComment)
             && TryGetByApiName(apiNameFromComment, out var byApi))
@@ -56,4 +63,8 @@ public sealed class FieldCatalog
 
         return null;
     }
+
+    private static bool IsLegacyRecordIdLabel(string? label) =>
+        label is not null
+        && label.Trim().Equals(LegacyRecordIdLabel, StringComparison.OrdinalIgnoreCase);
 }
