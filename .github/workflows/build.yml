@@ -47,10 +47,11 @@ jobs:
         if: github.ref != 'refs/heads/main'
         run: |
           set -euo pipefail
+          installer_output="$GITHUB_WORKSPACE/$DIST_DIR/installer"
           dotnet build installer/SalesforceRestAddin.Installer/SalesforceRestAddin.Installer.csproj \
             -c Release \
-            -p:OutputPath="$DIST_DIR/installer/"
-          cp -f "$DIST_DIR/installer/Install-SalesforceRestAddin.exe" "$DIST_DIR/Install-SalesforceRestAddin.exe"
+            -p:OutputPath="$installer_output/"
+          cp -f "$installer_output/Install-SalesforceRestAddin.exe" "$DIST_DIR/Install-SalesforceRestAddin.exe"
           ls -la "$DIST_DIR"
 
       - name: Stage packed XLLs and installer
