@@ -39,6 +39,26 @@ public sealed class SalesforceDataClientTests
     }
 
     [Test]
+    public async Task T_API_02b_Retrieve_Skips_Null_Composite_Entries()
+    {
+        var (client, _) = CreateClient(handler =>
+        {
+            handler.Enqueue(
+                HttpStatusCode.OK,
+                "[null,{\"attributes\":{\"type\":\"Account\"},\"Id\":\"001xx0000000001\",\"Name\":\"Acme\"}]");
+        });
+
+        var records = await client.RetrieveAsync(
+            "Account",
+            new[] { "001xx0000000000", "001xx0000000001" },
+            new[] { "Id", "Name" });
+
+        await Assert.That(records.Count).IsEqualTo(1);
+        await Assert.That(records[0]["Id"]).IsEqualTo("001xx0000000001");
+        await Assert.That(records[0]["Name"]).IsEqualTo("Acme");
+    }
+
+    [Test]
     public async Task ResolveAggregateCount_Uses_Expr0_Not_TotalSize()
     {
         var page = new QueryResultPage

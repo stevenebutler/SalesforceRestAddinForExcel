@@ -82,6 +82,11 @@ public static class SalesforceApiErrors
             {
                 foreach (var item in root.EnumerateArray())
                 {
+                    if (item.ValueKind != JsonValueKind.Object)
+                    {
+                        continue;
+                    }
+
                     if (item.TryGetProperty("errorCode", out var errorCode)
                         && IsSessionAuthErrorCode(errorCode.GetString()))
                     {

@@ -1,6 +1,10 @@
 using System;
 using System.IO;
+using SalesforceRestAddin.Core.DataPlane;
+using SalesforceRestAddin.Core.Tables;
 using SalesforceRestAddin.Core.Session;
+using SalesforceRestAddin.Tests.DataPlane;
+using SalesforceRestAddin.Tests.Fixtures;
 
 namespace SalesforceRestAddin.Tests;
 
@@ -120,6 +124,49 @@ public sealed class SessionFlowTraceTests
             ResetTraceFiles();
             RunReplacesExistingRolledFileTest().GetAwaiter().GetResult();
         }
+    }
+
+    [Test]
+    public async Task Query_selected_rows_logs_missing_retrieve_records()
+    {
+        lock (TestLock)
+        {
+            ResetTraceFiles();
+            RunMissingRetrieveRowsLogTest().GetAwaiter().GetResult();
+        }
+    }
+
+    private static async Task RunMissingRetrieveRowsLogTest()
+    {
+        var expectedId = SalesforceId.Normalize("001000000000001")!;
+        var binding = ForceTableBinder.Bind(ForceTableSnapshots.ValidAccountTable(1), DescribeFixtures.LoadAccountDescribe()).Binding!;
+        binding.Snapshot.Body[0, 0] = "001000000000001";
+
+        var (client, _) = SalesforceTestClients.Create(handler =>
+        {
+            handler.Enqueue(System.Net.HttpStatusCode.OK, "[null]");
+        });
+
+        var result = await QueryRows.RunAsync(
+            client,
+            new QueryRowsInput
+            {
+                Binding = binding,
+                Selection = new ForceTableSelection
+                {
+                    BodyRowIndices = new[] { 0 },
+                    StartColumnIndex = 0,
+                    EndColumnIndex = 2,
+                },
+            });
+
+        await Assert.That(result.ErrorSummary).IsNull();
+
+        var logPath = SalesforceRestAddinDataPaths.SessionTraceLogFile;
+        await Assert.That(File.Exists(logPath)).IsTrue();
+        var text = await File.ReadAllTextAsync(logPath);
+        await Assert.That(text).Contains("Query Selected Rows: Salesforce returned no row(s) for Id(s):");
+        await Assert.That(text).Contains(expectedId);
     }
 
     private static async Task RunReplacesExistingRolledFileTest()

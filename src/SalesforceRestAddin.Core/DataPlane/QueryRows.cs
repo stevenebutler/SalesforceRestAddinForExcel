@@ -69,12 +69,21 @@ public static class QueryRows
                 batch,
                 fields,
                 cancellationToken).ConfigureAwait(false);
+            var returnedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var record in retrieved)
             {
                 if (record.TryGetValue("Id", out var idObj) && idObj is string id)
                 {
                     recordsById[id] = record;
+                    returnedIds.Add(id);
                 }
+            }
+
+            var missingIds = batch.Where(id => !returnedIds.Contains(id)).ToList();
+            if (missingIds.Count > 0)
+            {
+                SessionFlowTrace.Log(
+                    $"Query Selected Rows: Salesforce returned no row(s) for Id(s): {string.Join(", ", missingIds)}");
             }
         }
 

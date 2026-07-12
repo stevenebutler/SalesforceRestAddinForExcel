@@ -186,7 +186,9 @@ public sealed class SalesforceDataClient
         var json = await SendAndReadAsync(request, $"retrieve {objectApiName}", cancellationToken).ConfigureAwait(false);
         using var document = JsonDocument.Parse(json);
         return document.RootElement.EnumerateArray()
-            .Select(ParseRecord)
+            .Select(TryParseRetrieveRecord)
+            .Where(record => record is not null)
+            .Select(record => record!)
             .ToList();
     }
 
@@ -342,6 +344,15 @@ public sealed class SalesforceDataClient
 
         return record;
     }
+
+    private static Dictionary<string, object?>? TryParseRetrieveRecord(JsonElement element) =>
+        element.ValueKind switch
+        {
+            JsonValueKind.Null => null,
+            JsonValueKind.Object => ParseRecord(element),
+            _ => throw new InvalidOperationException(
+                "Salesforce retrieve response must be a JSON array of objects or null entries."),
+        };
 
     private static object? ParseJsonValue(JsonElement value) =>
         value.ValueKind switch
