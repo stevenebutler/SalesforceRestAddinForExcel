@@ -6,14 +6,14 @@ Recommended for most users with / without internet access on the target machine:
 
 ## Online Install
 
-1. Download `Install-SalesforceRestAddin.exe`.
+1. Download `Install-SalesforceRestAddin.exe`. The binary is unsigned so you may be discouraged from downloading it by Smart Screen or other privacy turns.
 2. In File Explorer, right-click the downloaded EXE and select **Properties**.
 3. On the **General** tab, if an **Unblock** checkbox appears near the bottom of the window, select it. Then select **Apply** and **OK**.
 4. Run `Install-SalesforceRestAddin.exe` and choose **Install / Update**.
 
 The installer selects the correct package for supported Intel/AMD Office editions: 64-bit Office and older 32-bit Office. ARM-based Office is not currently supported. The installer downloads a package only when the installed XLL is not already the latest build, and registers the add-in for the current user without requiring administrator access. Fully close and reopen Excel after installation.
 
-Before installation, the Installer application detects a Windows-installed ForceConnector add-in and recommends removing it first to avoid COM conflicts. It can launch the registered ForceConnector uninstaller for you.
+Before installation, the Installer application detects whether legacy ForceConnector is enabled in Excel. If it is, continuing will disable it for the current user to avoid COM conflicts; this does not require administrator access or uninstall the Windows application. The optional **Uninstall ForceConnector** button can still launch the registered Windows uninstaller.
 
 ## Offline install
 
@@ -25,6 +25,12 @@ Only use this when the target machine cannot access the internet. Download `Inst
 ## Advanced PowerShell fallback
 
 The Installer application is simpler and is the recommended option. Use PowerShell only if you cannot use the installer application.
+
+If you are struggling to download the installer with your browser, you can use PowerShell to do so as follows:
+
+```powershell
+command here
+```
 
 The following command downloads and runs the installer script in memory, so it works when PowerShell policy blocks execution of `.ps1` files:
 

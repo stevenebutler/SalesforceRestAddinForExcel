@@ -44,7 +44,7 @@ Recommended for most users with internet access:
 
 The installer selects the correct package for supported Intel/AMD Office editions: 64-bit Office and older 32-bit Office. ARM-based Office is not currently supported. The installer downloads a package only when the installed XLL is not already the latest build, and registers the add-in for the current user without requiring administrator access. Fully close and reopen Excel after installation.
 
-Before installation, the Installer application detects a Windows-installed ForceConnector add-in and recommends removing it first to avoid COM conflicts. It can launch the registered ForceConnector uninstaller for you.
+Before installation, the Installer application detects whether legacy ForceConnector is enabled in Excel. If it is, continuing will disable it for the current user to avoid COM conflicts; this does not require administrator access or uninstall the Windows application. The optional **Uninstall ForceConnector** button can still launch the registered Windows uninstaller.
 
 ### Offline install
 

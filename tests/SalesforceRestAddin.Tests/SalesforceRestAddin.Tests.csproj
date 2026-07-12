@@ -18,6 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\installer\SalesforceRestAddin.Installer\ExcelStartupRegistration.cs" Link="Installer\ExcelStartupRegistration.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="Fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

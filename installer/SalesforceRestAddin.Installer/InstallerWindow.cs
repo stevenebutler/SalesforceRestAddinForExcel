@@ -245,38 +245,19 @@ internal sealed class InstallerWindow : Window
         try
         {
             _state = await _service.LoadStateAsync(AppendLogFromWorker);
-            if (_state.ForceConnectorUninstallEntries.Count > 0)
+            if (_state.ForceConnectorExcelRegistrations.Count > 0)
             {
-                var entry = ChooseForceConnectorEntry(_state.ForceConnectorUninstallEntries);
-                if (entry is null)
-                {
-                    return;
-                }
-
                 var confirmation = MessageBox.Show(
                     this,
-                    "ForceConnector may conflict with the Salesforce REST Add-in for Excel.\n\n" +
-                    "Install / Update will run the registered ForceConnector Windows uninstaller first. " +
-                    "After it completes successfully, this installation will continue.",
-                    "Uninstall ForceConnector first",
+                    "ForceConnector is currently enabled in Excel and may conflict with the Salesforce REST Add-in for Excel.\n\n" +
+                    "Install / Update will disable ForceConnector for this Windows user before continuing. " +
+                    "It will not uninstall the Windows application.",
+                    "Disable ForceConnector in Excel",
                     MessageBoxButton.OKCancel,
                     MessageBoxImage.Warning);
                 if (confirmation != MessageBoxResult.OK)
                 {
                     return;
-                }
-
-                SetStatus("Uninstalling ForceConnector...");
-                var uninstallResult = await _service.RunForceConnectorUninstallerAsync(entry, AppendLogFromWorker);
-                if (!uninstallResult.Succeeded)
-                {
-                    throw new InvalidOperationException($"The ForceConnector uninstaller exited with code {uninstallResult.ExitCode}. Installation was not continued.");
-                }
-
-                _state = await _service.LoadStateAsync(AppendLogFromWorker);
-                if (_state.ForceConnectorUninstallEntries.Count > 0)
-                {
-                    throw new InvalidOperationException("ForceConnector is still registered after its uninstaller completed. Installation was not continued.");
                 }
             }
 
@@ -437,11 +418,11 @@ internal sealed class InstallerWindow : Window
 
     private void RenderState(InstallerState state)
     {
-        var forceConnectorDetected = state.ForceConnectorUninstallEntries.Count > 0;
-        _statusText.Text = forceConnectorDetected
-            ? "ForceConnector may conflict with the Salesforce REST Add-in for Excel; uninstall it to avoid conflicts."
+        var forceConnectorEnabled = state.ForceConnectorExcelRegistrations.Count > 0;
+        _statusText.Text = forceConnectorEnabled
+            ? "ForceConnector is enabled in Excel; Install / Update will disable it to avoid COM conflicts."
             : state.Status;
-        _statusText.Foreground = forceConnectorDetected ? Brushes.DarkOrange : SystemColors.ControlTextBrush;
+        _statusText.Foreground = forceConnectorEnabled ? Brushes.DarkOrange : SystemColors.ControlTextBrush;
         _sourceValue.Text = state.BundledAssetPath is not null
             ? $"Bundled local package (offline-ready): {state.BundledAssetPath}"
             : state.GitHubCheckError is null
@@ -452,11 +433,13 @@ internal sealed class InstallerWindow : Window
         _installFolderValue.Text = state.InstallDirectory;
         _installedBuildValue.Text = state.InstalledVersion ?? (state.IsInstalled ? "Unknown (older XLL)" : "Not installed");
         _availableVersionValue.Text = state.AvailableVersion ?? "Unavailable";
-        _forceConnectorValue.Text = state.ForceConnectorUninstallEntries.Count switch
+        _forceConnectorValue.Text = state.ForceConnectorExcelRegistrations.Count switch
         {
-            0 => "Not detected",
-            1 => $"Detected — {state.ForceConnectorUninstallEntries[0].Description}. Install / Update will uninstall it first.",
-            _ => $"Detected — {state.ForceConnectorUninstallEntries.Count} Windows installations found. Install / Update will ask which one to uninstall first.",
+            0 => state.ForceConnectorUninstallEntries.Count == 0
+                ? "Not detected"
+                : "Windows installation detected, but ForceConnector is not enabled in Excel.",
+            1 => $"Enabled — {state.ForceConnectorExcelRegistrations[0].Description}. Install / Update will disable it first.",
+            _ => $"Enabled — {state.ForceConnectorExcelRegistrations.Count} current-user Excel registrations found. Install / Update will disable them first.",
         };
         _uninstallForceConnectorButton.Visibility = state.ForceConnectorUninstallEntries.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         _uninstallForceConnectorButton.IsEnabled = state.ForceConnectorUninstallEntries.Count > 0;

@@ -67,6 +67,7 @@ internal sealed class InstallerService
 
         var status = GetInstallStatus(installed, installedVersion, bundledPath, bundledVersion, latest, githubError);
         var forceConnectorEntries = FindForceConnectorUninstallEntries().ToList();
+        var forceConnectorExcelRegistrations = FindEnabledForceConnectorExcelRegistrations().ToList();
 
         return new InstallerState
         {
@@ -81,6 +82,7 @@ internal sealed class InstallerService
             Status = status.Status,
             GitHubCheckError = githubError,
             ForceConnectorUninstallEntries = forceConnectorEntries,
+            ForceConnectorExcelRegistrations = forceConnectorExcelRegistrations,
         };
     }
 
@@ -92,6 +94,7 @@ internal sealed class InstallerService
         var targetPath = Path.Combine(_installDirectory, assetName);
 
         Directory.CreateDirectory(_installDirectory);
+        DisableForceConnectorExcelRegistrations(log);
         RemoveSalesforceRestAddinRegistrations(log);
 
         if (bundledPath is not null)
@@ -418,6 +421,43 @@ internal sealed class InstallerService
         && (displayName.Contains("ForceConnector", StringComparison.OrdinalIgnoreCase)
             || displayName.Contains("Force.com Connector", StringComparison.OrdinalIgnoreCase));
 
+    private IEnumerable<ForceConnectorExcelRegistration> FindEnabledForceConnectorExcelRegistrations()
+    {
+        foreach (var view in RegistryViews())
+        {
+            using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, view);
+            using var addins = baseKey.OpenSubKey(ExcelAddinsPath);
+            if (addins is null)
+            {
+                continue;
+            }
+
+            foreach (var keyName in addins.GetSubKeyNames().Where(ExcelStartupRegistration.IsLegacyForceConnectorAddinKey))
+            {
+                using var key = addins.OpenSubKey(keyName);
+                var loadBehavior = key?.GetValue("LoadBehavior");
+                if (loadBehavior is null || Convert.ToInt32(loadBehavior) == 0)
+                {
+                    continue;
+                }
+
+                yield return new ForceConnectorExcelRegistration(view, ExcelAddinsPath + @"\" + keyName, Convert.ToInt32(loadBehavior));
+            }
+        }
+    }
+
+    private void DisableForceConnectorExcelRegistrations(Action<string>? log)
+    {
+        foreach (var registration in FindEnabledForceConnectorExcelRegistrations())
+        {
+            using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, registration.RegistryView);
+            using var key = baseKey.OpenSubKey(registration.RegistryPath, writable: true)
+                ?? throw new InvalidOperationException($"ForceConnector registration '{registration.RegistryPath}' could not be opened for the current user.");
+            key.SetValue("LoadBehavior", 0, RegistryValueKind.DWord);
+            Log(log, $"Disabled legacy ForceConnector Excel add-in for the current user: {registration.Description}.");
+        }
+    }
+
     private IReadOnlyList<string> RemoveSalesforceRestAddinRegistrations(Action<string>? log)
     {
         var removed = new List<string>();
@@ -432,9 +472,9 @@ internal sealed class InstallerService
                     continue;
                 }
 
-                foreach (var valueName in key.GetValueNames().Where(IsOpenValueName).ToList())
+                foreach (var valueName in key.GetValueNames().Where(ExcelStartupRegistration.IsOpenValueName).ToList())
                 {
-                    if (key.GetValue(valueName) is not string value || !LooksLikeSalesforceRestAddinXll(value))
+                    if (key.GetValue(valueName) is not string value || !ExcelStartupRegistration.IsSalesforceRestAddinXll(value))
                     {
                         continue;
                     }
@@ -471,29 +511,6 @@ internal sealed class InstallerService
             .Select(version => @"SOFTWARE\Microsoft\Office\" + version + ExcelOptionsSuffix)
             .ToList()
             ?? [];
-    }
-
-    private static bool IsOpenValueName(string name) => name.Equals("OPEN", StringComparison.OrdinalIgnoreCase)
-        || (name.StartsWith("OPEN", StringComparison.OrdinalIgnoreCase) && name.Substring(4).All(char.IsDigit));
-
-    private static bool LooksLikeSalesforceRestAddinXll(string value)
-    {
-        var filename = Path.GetFileName(ExtractCommandPath(value));
-        return filename.StartsWith("SalesforceRestAddin", StringComparison.OrdinalIgnoreCase)
-            && filename.EndsWith(".xll", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string ExtractCommandPath(string value)
-    {
-        var normalized = value.Trim();
-        if (normalized.StartsWith("\"", StringComparison.Ordinal))
-        {
-            var quotedEnd = normalized.IndexOf('"', 1);
-            return quotedEnd > 1 ? normalized.Substring(1, quotedEnd - 1) : normalized.Trim('"');
-        }
-
-        var firstSpace = normalized.IndexOf(' ');
-        return firstSpace > 0 ? normalized.Substring(0, firstSpace) : normalized;
     }
 
     private static string NextOpenSlot(RegistryKey key)
@@ -552,6 +569,22 @@ internal sealed class InstallerState
     public string? AvailableVersion { get; init; }
     public string? GitHubCheckError { get; init; }
     public IReadOnlyList<ForceConnectorUninstallEntry> ForceConnectorUninstallEntries { get; init; } = Array.Empty<ForceConnectorUninstallEntry>();
+    public IReadOnlyList<ForceConnectorExcelRegistration> ForceConnectorExcelRegistrations { get; init; } = Array.Empty<ForceConnectorExcelRegistration>();
+}
+
+internal sealed class ForceConnectorExcelRegistration
+{
+    public ForceConnectorExcelRegistration(RegistryView registryView, string registryPath, int loadBehavior)
+    {
+        RegistryView = registryView;
+        RegistryPath = registryPath;
+        LoadBehavior = loadBehavior;
+    }
+
+    public RegistryView RegistryView { get; }
+    public string RegistryPath { get; }
+    public int LoadBehavior { get; }
+    public string Description => $"{RegistryView} current-user Excel registration";
 }
 
 internal sealed class ForceConnectorUninstallEntry

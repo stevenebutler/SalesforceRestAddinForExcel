@@ -97,22 +97,18 @@ function Get-OfficeOptionsPaths {
     } finally { $office.Dispose() }
 }
 
-function Get-XllPathFromOpenValue {
-    param([string]$Value)
-    $trimmed = $Value.Trim()
-    if ($trimmed.StartsWith('"')) {
-        $end = $trimmed.IndexOf('"', 1)
-        if ($end -gt 1) { return $trimmed.Substring(1, $end - 1) }
-    }
-    $space = $trimmed.IndexOf(' ')
-    if ($space -gt 0) { return $trimmed.Substring(0, $space) }
-    return $trimmed
-}
-
 function Test-SalesforceRestAddinXll {
     param([string]$Value)
-    $fileName = [System.IO.Path]::GetFileName((Get-XllPathFromOpenValue $Value))
-    return $fileName -like 'SalesforceRestAddin*.xll'
+    $searchStart = 0
+    while ($searchStart -lt $Value.Length) {
+        $extensionIndex = $Value.IndexOf('.xll', $searchStart, [StringComparison]::OrdinalIgnoreCase)
+        if ($extensionIndex -lt 0) { return $false }
+        $separatorIndex = [Math]::Max($Value.LastIndexOf('\', $extensionIndex), $Value.LastIndexOf('/', $extensionIndex))
+        $fileName = $Value.Substring($separatorIndex + 1, $extensionIndex - $separatorIndex - 1)
+        if ($fileName.StartsWith('SalesforceRestAddin', [StringComparison]::OrdinalIgnoreCase)) { return $true }
+        $searchStart = $extensionIndex + 4
+    }
+    return $false
 }
 
 function Get-XllVersion {
@@ -203,6 +199,51 @@ function Get-ForceConnectorUninstallEntries {
     return @($results | Sort-Object DisplayName, Command -Unique)
 }
 
+function Get-EnabledForceConnectorExcelRegistrations {
+    $results = @()
+    foreach ($view in Get-RegistryViews) {
+        $base = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::CurrentUser, $view)
+        try {
+            $addins = $base.OpenSubKey("SOFTWARE\Microsoft\Office\Excel\Addins")
+            if (-not $addins) { continue }
+            try {
+                foreach ($name in $addins.GetSubKeyNames() | Where-Object { $_ -ieq "ForceConnector" }) {
+                    $key = $addins.OpenSubKey($name)
+                    try {
+                        $loadBehavior = $key.GetValue("LoadBehavior")
+                        if ($null -ne $loadBehavior -and [int]$loadBehavior -ne 0) {
+                            $results += [pscustomobject]@{
+                                View = $view
+                                Path = "SOFTWARE\Microsoft\Office\Excel\Addins\$name"
+                                LoadBehavior = [int]$loadBehavior
+                            }
+                        }
+                    } finally { if ($key) { $key.Dispose() } }
+                }
+            } finally { $addins.Dispose() }
+        } finally { $base.Dispose() }
+    }
+    return @($results)
+}
+
+function Disable-ForceConnectorExcelRegistrations {
+    $registrations = @(Get-EnabledForceConnectorExcelRegistrations)
+    if ($registrations.Count -eq 0) { return }
+
+    Write-Warning "ForceConnector is enabled in Excel and may conflict with the Salesforce REST Add-in. Continuing will disable it for the current user."
+    foreach ($registration in $registrations) {
+        $base = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::CurrentUser, $registration.View)
+        try {
+            $key = $base.OpenSubKey($registration.Path, $true)
+            try {
+                if (-not $key) { throw "ForceConnector registration '$($registration.Path)' could not be opened for the current user." }
+                $key.SetValue("LoadBehavior", 0, [Microsoft.Win32.RegistryValueKind]::DWord)
+                Write-Host "Disabled ForceConnector Excel registration for $($registration.View)."
+            } finally { if ($key) { $key.Dispose() } }
+        } finally { $base.Dispose() }
+    }
+}
+
 if ($UninstallForceConnector) {
     $entries = @(Get-ForceConnectorUninstallEntries)
     if ($entries.Count -eq 0) { throw "No Windows-installed ForceConnector product was found." }
@@ -237,6 +278,7 @@ $assetName = if ($bitness -eq "x64") { "SalesforceRestAddin64-packed.xll" } else
 $xllPath = Join-Path $InstallDir $assetName
 $bundledPath = Join-Path $PSScriptRoot $assetName
 New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+Disable-ForceConnectorExcelRegistrations
 
 if (Test-Path $bundledPath) {
     $bundledVersion = Get-XllVersion $bundledPath
