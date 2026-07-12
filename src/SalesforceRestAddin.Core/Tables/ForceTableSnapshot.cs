@@ -11,6 +11,13 @@ public sealed class ForceTableSnapshot
     /// <summary>Row 1 values from column B onward (criteria triplets).</summary>
     public required object?[] CriteriaRow { get; init; }
 
+    /// <summary>
+    /// Salesforce Ids expanded by the Excel host from range/name values in hidden legacy
+    /// reference criteria. The key is the zero-based criteria-row value-cell index.
+    /// </summary>
+    public IReadOnlyDictionary<int, IReadOnlyList<string>> CriteriaReferenceIds { get; init; } =
+        new Dictionary<int, IReadOnlyList<string>>();
+
     /// <summary>Row 2 header labels (column A through last data column).</summary>
     public required object?[] HeaderLabels { get; init; }
 

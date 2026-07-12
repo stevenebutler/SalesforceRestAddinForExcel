@@ -97,6 +97,7 @@ public static class ForceTableReader
         var bodyRowCount = Math.Max(0, table.Rows.Count - 2);
         var body = ReadBody(table, bodyRowCount, columnCount);
         var criteriaRow = ReadCriteriaRow(table, columnCount);
+        var criteriaReferenceIds = ReadCriteriaReferenceIds(worksheet, criteriaRow);
         var hiddenRows = ReadHiddenRows(worksheet, startRow, bodyRowCount);
         var hiddenColumns = ReadHiddenColumns(worksheet, startColumn, columnCount);
         SessionFlowTrace.Log(
@@ -108,6 +109,7 @@ public static class ForceTableReader
         {
             ObjectApiName = objectApiName,
             CriteriaRow = criteriaRow,
+            CriteriaReferenceIds = criteriaReferenceIds,
             HeaderLabels = headerLabels,
             HeaderApiNames = headerApiNames,
             Body = body,
@@ -257,6 +259,82 @@ public static class ForceTableReader
         }
 
         return criteria;
+    }
+
+    private static IReadOnlyDictionary<int, IReadOnlyList<string>> ReadCriteriaReferenceIds(
+        Worksheet worksheet,
+        object?[] criteria)
+    {
+        var result = new Dictionary<int, IReadOnlyList<string>>();
+        for (var i = 0; i + 2 < criteria.Length; i += 3)
+        {
+            var operation = criteria[i + 1]?.ToString()?.Trim();
+            if (!string.Equals(operation, "in", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var rangeName = criteria[i + 2]?.ToString()?.Trim();
+            if (string.IsNullOrWhiteSpace(rangeName))
+            {
+                continue;
+            }
+
+            try
+            {
+                var source = worksheet.Range[rangeName];
+                result[i + 2] = ReadSalesforceIds(source);
+            }
+            catch
+            {
+                // Core reports a criteria-cell error when this is not a valid range/name.
+            }
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<string> ReadSalesforceIds(Range source)
+    {
+        var ids = new List<string>();
+        var raw = source.Value2;
+        if (raw is object[,] values)
+        {
+            for (var row = 1; row <= values.GetLength(0); row++)
+            {
+                for (var column = 1; column <= values.GetLength(1); column++)
+                {
+                    AddSalesforceId(ids, values[row, column]);
+                }
+            }
+        }
+        else
+        {
+            AddSalesforceId(ids, raw);
+        }
+
+        return ids;
+    }
+
+    private static void AddSalesforceId(List<string> ids, object? value)
+    {
+        var id = value?.ToString()?.Trim();
+        if (id is null || !IsSalesforceId(id) || ids.Contains(id, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        ids.Add(id);
+    }
+
+    private static bool IsSalesforceId(string value)
+    {
+        if (value.Length is not 15 and not 18)
+        {
+            return false;
+        }
+
+        return value.All(char.IsLetterOrDigit);
     }
 
     private static object?[,] NormalizeBlock(object[,] raw, int rows, int columns)

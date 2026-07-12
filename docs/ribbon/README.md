@@ -2,6 +2,8 @@
 
 Behavioral specifications for the **Salesforce Rest** ribbon (Excel-DNA + WPF). Each button has its own file; shared rules live in [common-performance-requirements.md](./common-performance-requirements.md) and UI policy in [ui-platform.md](./ui-platform.md).
 
+For worksheet criteria examples, see [Query Criteria Operators](../query-criteria-operators.md).
+
 | Doc | Purpose |
 |-----|---------|
 | [design.md](./design.md) | Module layout: cohesive folders, per-button Core files, Excel reader/writer |

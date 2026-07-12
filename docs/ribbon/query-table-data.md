@@ -35,7 +35,7 @@ Parse WHERE criteria from **row 1**, run SOQL against the table’s object, pagi
 
 ### FR-QTD-3 WHERE clause builder (row 1)
 
-Starting column B, read repeating triplets: `[field label or API] | [operator] | [value] |` optional fourth cell `and` continuation.
+Starting column B, read repeating triplets: `[field label or API] | [operator] | [value]`.
 
 **Field resolution:**
 
@@ -52,8 +52,7 @@ Starting column B, read repeating triplets: `[field label or API] | [operator] |
 | begins with / starts with | `LIKE` with `value%` |
 | ends with | `LIKE` with `%value` |
 | regexp | `like` (user supplies wildcards) |
-| in | `IN (...)` |
-| on | reference join mode (see FR-QTD-4) |
+| includes / excludes | `includes` / `excludes` |
 
 **Value rules:**
 
@@ -69,10 +68,13 @@ Starting column B, read repeating triplets: `[field label or API] | [operator] |
 
 **Validation errors** must cite the offending cell address.
 
-### FR-QTD-4 Reference join mode (`in` / `on` on reference field)
+### FR-QTD-4 Hidden legacy reference-list compatibility (`in` on reference field)
 
-- `in` + reference: build Id list from the value cell (see [bugs.md](../bugs.md) #9 for open product questions on range vs comma-separated Ids).
-- `on`: one result row per reference Id.
+- `in` is not a visible Table Query Wizard operator. It remains accepted for ForceConnector-style sheets.
+- Its value cell must name an Excel range or named range containing Salesforce record Ids. Empty cells and non-Id values in that range are ignored; no valid Ids is a validation error citing the criteria cell.
+- Comma-separated Id text is not a supported reference-list input.
+- `in` executes as a normal matching query over the supplied Id set.
+- `on` is rejected with: `ON is not supported - use IN with a range reference to select multiple items.`
 
 **Required approach:** batch with `WHERE ref IN (...)` within Salesforce limits (not one HTTP query per Id).
 
@@ -123,7 +125,7 @@ Independent of `NoWarning` (which gates insert / include-hidden update confirms)
 - Pure function: table model + describe → SOQL string + metadata.
 - Unit test golden cases for operators, multipicklist, empty values, OR groups.
 
-### NFR-QTD-3 Join mode batching
+### NFR-QTD-3 Reference-list batching
 
 | Approach | API cost |
 |----------|----------|

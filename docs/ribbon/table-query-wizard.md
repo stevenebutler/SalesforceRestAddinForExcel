@@ -59,7 +59,7 @@ Grid sorting follows the shared rule used by other WPF pickers:
 ### FR-TQW-5 Step 3 — Query clauses
 
 - UI to build zero or more WHERE triplets: `[field] | [operator] | [value]`.
-- Operators and value rules match [query-table-data.md](./query-table-data.md) (FR-QTD-3).
+- Operators are `equals`, `not equals`, `like`, `starts with`, `ends with`, `less than`, `greater than`, `includes`, `excludes`, and `regexp`; value rules match [query-table-data.md](./query-table-data.md) (FR-QTD-3). `in` is hidden ForceConnector compatibility syntax, not a wizard choice; `on` is rejected with guidance to use `in`.
 - If user adds no clauses, default: `RECORD ID | not equals | (empty)` — equivalent to “all records” semantics via empty-id filter.
 - Show destination cell at the top.
 - **Run Query** writes triplets into **row 1** starting at column B (field label in cell, API name in comment where needed).
@@ -135,4 +135,4 @@ Field label → API name mapping for later query/update uses describe metadata �
 ## Notes
 
 - Single WPF wizard window — see [ui-platform.md](./ui-platform.md).
-- Reference-join batching inherits from [query-table-data.md](./query-table-data.md).
+- Hidden legacy reference-list batching inherits from [query-table-data.md](./query-table-data.md).

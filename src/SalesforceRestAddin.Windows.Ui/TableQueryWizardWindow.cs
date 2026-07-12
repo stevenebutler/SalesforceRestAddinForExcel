@@ -42,7 +42,7 @@ public sealed class TableQueryWizardWindow : Window
 
     private static readonly string[] Operators =
     [
-        "equals", "not equals", "contains", "begins with", "ends with", "less than", "greater than", "in",
+        "equals", "not equals", "like", "starts with", "ends with", "less than", "greater than", "includes", "excludes", "regexp",
     ];
 
     private readonly IReadOnlyList<SObjectSummary> _objects;

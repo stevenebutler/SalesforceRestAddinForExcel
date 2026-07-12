@@ -1,7 +1,11 @@
 # Legacy Criteria Compatibility
 
 This document captures the legacy `ForceConnector/ForceConnector` Table Query Wizard
-criteria/operator behavior so the new add-in can preserve workbook compatibility.
+criteria/operator intent. The new add-in preserves that contract without reproducing
+the legacy implementation's per-cell query rewriting.
+
+For practical worksheet examples and the precise current behavior, see
+[Query Criteria Operators](./query-criteria-operators.md).
 
 ## Legacy wizard operator list
 
@@ -36,8 +40,8 @@ It did **not** show `in` or `on` as visible wizard options.
 | `excludes` | Passed through as `excludes` | On multipicklist fields, treated as `excludes`; otherwise passed through |
 | `regexp` | Rewritten to `like`, with the user supplying wildcard-style input | Rewritten to `like` |
 | `contains` | Not a legacy wizard label | Accepted by the new parser as an alias for `like` |
-| `in` | Not a visible legacy wizard option; on reference fields, legacy treated saved `in` clauses as a reference join | On reference fields, parsed as `IN (...)` from a comma-separated Id list |
-| `on` | Not a visible legacy wizard option; on reference fields, legacy treated saved `on` clauses as one-row-per-reference join mode | On reference fields, parsed as join mode and batched by Id list |
+| `in` | Not a visible legacy wizard option; reference lists were supplied through an Excel range/name | Hidden compatibility syntax. Its value must name an Excel range or named range containing Salesforce Ids; the add-in batches `IN (...)` queries. |
+| `on` | Not a visible legacy wizard option; the multiple-reference implementation accumulated incompatible `AND` conditions | Rejected: `ON is not supported - use IN with a range reference to select multiple items.` |
 
 ## Value formatting
 
@@ -63,6 +67,8 @@ Legacy and new code both format values by Salesforce field type, but the source 
 
 - Legacy only converts names to Ids when the `USE_REFERENCE` option is enabled.
 - New code only resolves names to Ids when `ConnectorOptions.UseReference` is enabled and an `IReferenceResolver` is provided.
+- `in` is not a wizard choice. Existing ForceConnector-style sheets can use it with a range or named range of Salesforce Ids; comma-separated Id text is not a supported reference-list input.
+- `on` is rejected because ForceConnector's implementation is not useful for a multiple-Id range; use `in` instead.
 
 ## Sources
 

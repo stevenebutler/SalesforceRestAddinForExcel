@@ -80,7 +80,8 @@ public static class QueryTable
             binding.Catalog,
             input.Options,
             input.ReferenceResolver,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            input.Snapshot.CriteriaReferenceIds).ConfigureAwait(false);
 
         if (!criteria.Succeeded)
         {
@@ -150,7 +151,8 @@ public static class QueryTable
             binding.Catalog,
             input.Options,
             input.ReferenceResolver,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            input.Snapshot.CriteriaReferenceIds).ConfigureAwait(false);
         if (!criteria.Succeeded)
         {
             return Complete(new DataOperationResult { ErrorSummary = criteria.Errors[0].Message }, TimeSpan.Zero);
@@ -328,7 +330,8 @@ public static class QueryTable
             binding.Catalog,
             input.Options,
             input.ReferenceResolver,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            input.Snapshot.CriteriaReferenceIds).ConfigureAwait(false);
 
         if (!criteria.Succeeded)
         {

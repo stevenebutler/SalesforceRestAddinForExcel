@@ -22,7 +22,8 @@ public static class SoqlCriteriaParser
         FieldCatalog catalog,
         ConnectorOptions options,
         IReferenceResolver? referenceResolver,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IReadOnlyDictionary<int, IReadOnlyList<string>>? criteriaReferenceIds = null)
     {
         if (criteriaRow is null)
         {
@@ -78,20 +79,42 @@ public static class SoqlCriteriaParser
                 return new SoqlCriteriaParseResult { Errors = errors };
             }
 
-            if (string.Equals(normalizedOperator, "in", StringComparison.OrdinalIgnoreCase)
-                && field.IsReference)
+            if (normalizedOperator == "on")
             {
-                var ids = ParseIdList(value);
-                var inList = string.Join(", ", ids.Select(id => $"'{SoqlEscape.EscapeLiteral(id)}'"));
-                clauses.Add($"{field.Name} IN ({inList})");
-                continue;
+                errors.Add(new SoqlCriteriaError
+                {
+                    Cell = new CellRef(1, i + 3),
+                    Message = "ON is not supported - use IN with a range reference to select multiple items.",
+                });
+                return new SoqlCriteriaParseResult { Errors = errors };
             }
 
-            if (string.Equals(normalizedOperator, "on", StringComparison.OrdinalIgnoreCase)
-                && field.IsReference)
+            if (normalizedOperator == "in")
             {
+                if (!field.IsReference)
+                {
+                    errors.Add(new SoqlCriteriaError
+                    {
+                        Cell = new CellRef(1, i + 2),
+                        Message = $"{normalizedOperator} is only valid on reference fields.",
+                    });
+                    return new SoqlCriteriaParseResult { Errors = errors };
+                }
+
+                if (criteriaReferenceIds is null
+                    || !criteriaReferenceIds.TryGetValue(i + 2, out var ids)
+                    || ids.Count == 0)
+                {
+                    errors.Add(new SoqlCriteriaError
+                    {
+                        Cell = new CellRef(1, i + 3),
+                        Message = "Reference criteria must name an Excel range or named range containing Salesforce record Ids.",
+                    });
+                    return new SoqlCriteriaParseResult { Errors = errors };
+                }
+
                 joinField = field.Name;
-                joinIds = ParseIdList(value);
+                joinIds = ids.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
                 joinMode = true;
                 continue;
             }
@@ -150,7 +173,6 @@ public static class SoqlCriteriaParser
             "ends with" => "ends with",
             "regexp" => "like",
             "in" => "in",
-            "on" => "on",
             _ => raw.Trim().ToLowerInvariant(),
         };
     }
@@ -232,8 +254,9 @@ public static class SoqlCriteriaParser
     {
         if (string.Equals(field.Type, "multipicklist", StringComparison.OrdinalIgnoreCase))
         {
-            var negated = normalizedOperator is "!=" or "not equals"
-                || rawOperator.Equals("not equals", StringComparison.OrdinalIgnoreCase);
+            var negated = normalizedOperator is "!=" or "not equals" or "excludes"
+                || rawOperator.Equals("not equals", StringComparison.OrdinalIgnoreCase)
+                || rawOperator.Equals("excludes", StringComparison.OrdinalIgnoreCase);
             return negated ? "excludes" : "includes";
         }
 
@@ -599,9 +622,4 @@ public static class SoqlCriteriaParser
         return value;
     }
 
-    private static List<string> ParseIdList(string value) =>
-        value.Split(',')
-            .Select(p => p.Trim())
-            .Where(p => p.Length > 0)
-            .ToList();
 }

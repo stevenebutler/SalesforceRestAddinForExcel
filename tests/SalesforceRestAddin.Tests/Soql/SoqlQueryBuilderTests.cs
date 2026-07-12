@@ -99,10 +99,75 @@ public sealed class SoqlQueryBuilderTests
     }
 
     [Test]
-    public async Task T_SOQL_14_Reference_In_Clause()
+    public async Task T_SOQL_14_Reference_Range_Is_Batched()
     {
-        var result = await ParseAsync("Parent Account", "in", "001A,001B");
-        await Assert.That(result.WhereClause).IsEqualTo("ParentId IN ('001A', '001B')");
+        var criteria = new object?[] { "Parent Account", "in", "AccountIds" };
+        var result = await SoqlCriteriaParser.ParseAsync(
+            criteria,
+            Catalog,
+            ConnectorOptions.Default,
+            null,
+            criteriaReferenceIds: new Dictionary<int, IReadOnlyList<string>>
+            {
+                [2] = ["001000000000001", "001000000000002"],
+            });
+
+        await Assert.That(result.WhereClause).IsEqualTo(string.Empty);
+        await Assert.That(result.ReferenceJoinField).IsEqualTo("ParentId");
+        await Assert.That(result.ReferenceJoinIds).IsEquivalentTo(new[] { "001000000000001", "001000000000002" });
+    }
+
+    [Test]
+    public async Task T_SOQL_15_Reference_In_Requires_Excel_Range()
+    {
+        var result = await ParseAsync("Parent Account", "in", "001000000000001,001000000000002");
+
+        await Assert.That(result.Succeeded).IsFalse();
+        await Assert.That(result.Errors[0].Message).Contains("Excel range or named range");
+    }
+
+    [Test]
+    public async Task T_SOQL_15a_On_Is_Rejected_With_In_Guidance()
+    {
+        var result = await ParseAsync("Parent Account", "on", "CustomerIds");
+
+        await Assert.That(result.Succeeded).IsFalse();
+        await Assert.That(result.Errors[0].Message).IsEqualTo(
+            "ON is not supported - use IN with a range reference to select multiple items.");
+    }
+
+    [Test]
+    public async Task T_SOQL_15b_Multipicklist_Excludes_Is_Preserved()
+    {
+        var catalog = CatalogWith(new FieldDescriptor
+        {
+            Name = "Regions__c",
+            Label = "Regions",
+            Type = "multipicklist",
+        });
+
+        var result = await SoqlCriteriaParser.ParseAsync(
+            new object?[] { "Regions", "excludes", "APAC" },
+            catalog,
+            ConnectorOptions.Default,
+            null);
+
+        await Assert.That(result.WhereClause).IsEqualTo("Regions__c excludes ('APAC')");
+    }
+
+    [Test]
+    public async Task T_SOQL_15c_Reference_Range_Is_Split_Into_Batches()
+    {
+        var batches = SoqlQueryBuilder.BuildReferenceInBatches(
+            ["001000000000001", "001000000000002", "001000000000003"],
+            "ParentId",
+            batchSize: 2);
+
+        await Assert.That(batches).IsEquivalentTo(new[]
+        {
+            "ParentId IN ('001000000000001', '001000000000002')",
+            "ParentId IN ('001000000000003')",
+        });
     }
 
     [Test]
