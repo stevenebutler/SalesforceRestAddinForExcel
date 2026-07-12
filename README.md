@@ -31,9 +31,45 @@ Packed outputs:
 
 ## Install (Windows)
 
-Each successful `develop` build publishes a rolling [**latest** release](https://github.com/stevenebutler/SalesforceRestAddinForExcel/releases/latest) with both XLLs and `Install-SalesforceRestAddin.ps1`.
+Each successful `develop` build publishes a rolling [**latest** release](https://github.com/stevenebutler/SalesforceRestAddinForExcel/releases/latest) with both XLLs, `Install-SalesforceRestAddin.exe`, and `Install-SalesforceRestAddin.ps1`.
 
-In PowerShell:
+### Installer application for simplified installation
+
+Recommended for most users with internet access:
+
+1. Download `Install-SalesforceRestAddin.exe`.
+2. In File Explorer, right-click the downloaded EXE and select **Properties**.
+3. On the **General** tab, if an **Unblock** checkbox appears near the bottom of the window, select it. Then select **Apply** and **OK**.
+4. Run `Install-SalesforceRestAddin.exe` and choose **Install / Update**.
+
+The installer selects the correct package for supported Intel/AMD Office editions: 64-bit Office and older 32-bit Office. ARM-based Office is not currently supported. The installer downloads a package only when the installed XLL is not already the latest build, and registers the add-in for the current user without requiring administrator access. Fully close and reopen Excel after installation.
+
+Before installation, the Installer application detects a Windows-installed ForceConnector add-in and recommends removing it first to avoid COM conflicts. It can launch the registered ForceConnector uninstaller for you.
+
+### Offline install
+
+Only use this when the target machine cannot access the internet. Download `Install-SalesforceRestAddin.exe` and both packed XLL files into the same folder on an internet-connected machine, transfer that folder to the target machine, unblock the EXE using the steps above, then run it and choose **Install / Update**. The installer selects the package for the target machine’s supported Intel/AMD Office edition without downloading anything.
+
+- `SalesforceRestAddin64-packed.xll` — 64-bit Office on Intel/AMD Windows PCs
+- `SalesforceRestAddin-packed.xll` — older 32-bit Office on Intel/AMD Windows PCs
+
+### Advanced PowerShell fallback
+
+The Installer application is simpler and is the recommended option. Use PowerShell only if you cannot use the installer application.
+
+This command downloads and runs the installer script in memory, so it works when PowerShell policy blocks execution of `.ps1` files:
+
+```powershell
+irm https://github.com/stevenebutler/SalesforceRestAddinForExcel/releases/latest/download/Install-SalesforceRestAddin.ps1 | iex
+```
+
+To uninstall the Salesforce REST add-in with the same policy-independent approach:
+
+```powershell
+& ([scriptblock]::Create((irm https://github.com/stevenebutler/SalesforceRestAddinForExcel/releases/latest/download/Install-SalesforceRestAddin.ps1))) -Uninstall
+```
+
+If your PowerShell execution policy permits scripts, you can instead download and run the script locally:
 
 ```powershell
 irm https://github.com/stevenebutler/SalesforceRestAddinForExcel/releases/latest/download/Install-SalesforceRestAddin.ps1 -OutFile Install-SalesforceRestAddin.ps1
@@ -41,13 +77,7 @@ Unblock-File .\Install-SalesforceRestAddin.ps1
 .\Install-SalesforceRestAddin.ps1
 ```
 
-Or download and run in one step:
-
-```powershell
-irm https://github.com/stevenebutler/SalesforceRestAddinForExcel/releases/latest/download/Install-SalesforceRestAddin.ps1 | iex
-```
-
-The script detects Excel bitness, downloads the matching packed XLL, removes Mark of the Web, and registers the add-in for the current user. Restart Excel after install. Uninstall with `.\Install-SalesforceRestAddin.ps1 -Uninstall`.
+Running `.\Install-SalesforceRestAddin.ps1` or `.\Install-SalesforceRestAddin.ps1 -Uninstall` requires a PowerShell execution policy that allows script execution. To remove a Windows-installed ForceConnector VSTO add-in through PowerShell, use `.\Install-SalesforceRestAddin.ps1 -UninstallForceConnector`. The Installer application can also uninstall the Salesforce REST add-in. Uninstalling removes only the Salesforce REST XLL files and Excel registrations; login and other JSON settings are kept.
 
 ## VBA
 
@@ -76,4 +106,3 @@ This REST + Excel-DNA project reimplements that worksheet/ribbon workflow with:
 * More integrated, modern OAuth authentication flows.
 
 Reference fields show Ids rather than names to simplify VBA scripting of cross-table interactions. Other behaviour differences may exist; please raise them as issues for consideration.
-

@@ -44,6 +44,15 @@ run_build() {
   fi
 }
 
+run_installer_build() {
+  local configuration="${FC_CONFIGURATION:-Release}"
+  echo "Building Install-SalesforceRestAddin (net48, $configuration)..."
+  dotnet build "$ROOT_DIR/installer/SalesforceRestAddin.Installer/SalesforceRestAddin.Installer.csproj" \
+    -c "$configuration" \
+    --verbosity minimal \
+    "$@"
+}
+
 run_test() {
   # net10.0 only: Core test TFM + TUnit (Linux runtime).
   echo "Building Core (net10.0) + Tests..."
@@ -69,6 +78,11 @@ case "$COMMAND" in
     shift || true
     run_restore
     run_build "$@"
+    ;;
+  installer-build)
+    shift || true
+    run_restore
+    run_installer_build "$@"
     ;;
   test)
     shift || true

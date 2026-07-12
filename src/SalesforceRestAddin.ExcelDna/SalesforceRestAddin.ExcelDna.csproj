@@ -12,6 +12,7 @@
     <ExcelAddInInclude>SalesforceRestAddin.Core.dll</ExcelAddInInclude>
     <GitCommitId Condition="'$(GitCommitId)' == ''">$(FC_GIT_COMMIT)</GitCommitId>
     <GitCommitId Condition="'$(GitCommitId)' == ''">unknown</GitCommitId>
+    <XllVersionMarker>SalesforceRestAddin-Version: $(GitCommitId)</XllVersionMarker>
   </PropertyGroup>
 
   <Target Name="GenerateBuildInfo" BeforeTargets="BeforeCompile">
@@ -34,6 +35,17 @@
       <Compile Include="$(GeneratedBuildInfoFile)" />
       <FileWrites Include="$(GeneratedBuildInfoFile)" />
     </ItemGroup>
+  </Target>
+
+  <Target Name="EmbedPackedXllBuildVersion" AfterTargets="ExcelDnaPack">
+    <ItemGroup>
+      <PackedXll Include="$(OutputPath)publish\*-packed.xll" />
+    </ItemGroup>
+    <WriteLinesToFile
+      File="%(PackedXll.FullPath)"
+      Lines="$(XllVersionMarker)"
+      Overwrite="false"
+      Encoding="UTF-8" />
   </Target>
 
   <ItemGroup>
