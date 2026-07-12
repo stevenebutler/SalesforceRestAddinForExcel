@@ -29,7 +29,8 @@ The Installer application is simpler and is the recommended option. Use PowerShe
 If you are struggling to download the installer with your browser, you can use PowerShell to do so as follows:
 
 ```powershell
-command here
+irm https://github.com/{{REPOSITORY}}/releases/latest/download/Install-SalesforceRestAddin.exe -OutFile Install-SalesforceRestAddin.exe
+Unblock-File .\Install-SalesforceRestAddin.exe
 ```
 
 The following command downloads and runs the installer script in memory, so it works when PowerShell policy blocks execution of `.ps1` files:

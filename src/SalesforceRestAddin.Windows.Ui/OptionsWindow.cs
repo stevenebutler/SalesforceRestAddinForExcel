@@ -6,7 +6,7 @@ namespace SalesforceRestAddin.Windows.Ui;
 
 public sealed class OptionsWindow : Window
 {
-    private readonly CheckBox _useReference;
+    private readonly bool _useReference;
     private readonly CheckBox _noWarning;
     private readonly CheckBox _noConfirmQueryDownload;
     private readonly CheckBox _noQueryLimit;
@@ -37,7 +37,7 @@ public sealed class OptionsWindow : Window
         ResizeMode = ResizeMode.NoResize;
 
         var root = new StackPanel { Margin = new Thickness(16) };
-        _useReference = MakeCheck("Use Reference Name/Id", current.UseReference);
+        _useReference = current.UseReference;
         _noWarning = MakeCheck("Do not warn before insert or update operations.", current.NoWarning);
         _noConfirmQueryDownload = MakeCheck("Do not confirm Query Table downloads.", current.NoConfirmQueryDownload);
         _noQueryLimit = MakeCheck("No Query Limit", current.NoQueryLimit);
@@ -67,7 +67,6 @@ public sealed class OptionsWindow : Window
             "Do not fit rows",
             "rowSizing",
             current.RowSizingMode == RowSizingMode.None);
-        root.Children.Add(_useReference);
         root.Children.Add(_noWarning);
         root.Children.Add(_noConfirmQueryDownload);
         root.Children.Add(_noQueryLimit);
@@ -124,7 +123,7 @@ public sealed class OptionsWindow : Window
         var batch = int.TryParse(_batchSize.Text, out var size) && size > 0 ? size : 200;
         return new ConnectorOptions
         {
-            UseReference = _useReference.IsChecked == true,
+            UseReference = _useReference,
             NoWarning = _noWarning.IsChecked == true,
             NoConfirmQueryDownload = _noConfirmQueryDownload.IsChecked == true,
             NoQueryLimit = _noQueryLimit.IsChecked == true,
