@@ -91,12 +91,12 @@ public static class SoqlCriteriaParser
 
             if (normalizedOperator == "in")
             {
-                if (!field.IsReference)
+                if (!field.IsReference && !field.IsId)
                 {
                     errors.Add(new SoqlCriteriaError
                     {
                         Cell = new CellRef(1, i + 2),
-                        Message = $"{normalizedOperator} is only valid on reference fields.",
+                        Message = $"{normalizedOperator} is only valid on Id or reference fields.",
                     });
                     return new SoqlCriteriaParseResult { Errors = errors };
                 }

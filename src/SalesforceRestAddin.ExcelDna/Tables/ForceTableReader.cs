@@ -120,6 +120,101 @@ public static class ForceTableReader
         };
     }
 
+    internal static ForceTableSnapshot CaptureShell(Application application, Worksheet worksheet, Range activeCell)
+    {
+        if (application is null)
+        {
+            throw new ArgumentNullException(nameof(application));
+        }
+
+        if (worksheet is null)
+        {
+            throw new ArgumentNullException(nameof(worksheet));
+        }
+
+        if (activeCell is null)
+        {
+            throw new ArgumentNullException(nameof(activeCell));
+        }
+
+        var anchor = (Range)activeCell.Cells[1, 1];
+        var activeColumn = anchor.Column;
+        var activeRow = anchor.Row;
+
+        var region = anchor.CurrentRegion;
+        var regionStartRow = region.Row;
+        var regionStartColumn = region.Column;
+        var regionColumnCount = region.Columns.Count;
+        var regionRowCount = region.Rows.Count;
+
+        var headerSheetRow = regionRowCount >= 2 ? regionStartRow + 1 : Math.Max(1, activeRow - 1);
+        var objectSheetRow = headerSheetRow - 1;
+        if (objectSheetRow < 1)
+        {
+            objectSheetRow = 1;
+            headerSheetRow = 2;
+        }
+
+        var headerValueStopwatch = Stopwatch.StartNew();
+        var headerMap = ReadHeaderRowMap(worksheet, headerSheetRow, regionStartColumn, regionColumnCount);
+        headerValueStopwatch.Stop();
+        ExtendHeaderMapLeft(worksheet, headerSheetRow, headerMap, regionStartColumn, activeColumn);
+
+        var bounds = TableBoundaryResolver.Resolve(headerMap, activeColumn);
+        if (!bounds.Succeeded)
+        {
+            throw new InvalidOperationException(bounds.ErrorMessage ?? "Could not locate a ForceConnector table.");
+        }
+
+        var startColumn = bounds.StartColumn;
+        var columnCount = bounds.ColumnCount;
+        var startRow = objectSheetRow;
+
+        var objectCell = (Range)worksheet.Cells[startRow, startColumn];
+        var objectApiName = ReadObjectApiName(objectCell);
+        if (string.IsNullOrWhiteSpace(objectApiName) || objectApiName.Contains(' '))
+        {
+            var address = objectCell.Address[false, false];
+            throw new InvalidOperationException(
+                $"Could not locate an object name in cell {address}. " +
+                "The entity name must appear above the first field column of the table.");
+        }
+
+        var table = worksheet.Range[
+            worksheet.Cells[startRow, startColumn],
+            worksheet.Cells[Math.Max(startRow + 1, regionStartRow + regionRowCount - 1), startColumn + columnCount - 1]];
+
+        var headerLabels = ReadRow(table, 2, columnCount);
+        var headerCommentStopwatch = Stopwatch.StartNew();
+        var headerApiNames = ReadHeaderApiNames(table, columnCount);
+        headerCommentStopwatch.Stop();
+        SessionFlowTrace.Log(
+            $"ForceTableReader: header row read cells={columnCount} " +
+            $"values={headerValueStopwatch.ElapsedMilliseconds}ms " +
+            $"notes={headerCommentStopwatch.ElapsedMilliseconds}ms");
+        var bodyRowCount = Math.Max(0, table.Rows.Count - 2);
+        var body = ReadBody(table, bodyRowCount, columnCount);
+        var hiddenRows = ReadHiddenRows(worksheet, startRow, bodyRowCount);
+        var hiddenColumns = ReadHiddenColumns(worksheet, startColumn, columnCount);
+        SessionFlowTrace.Log(
+            $"ForceTableReader: visibility bodyRows={bodyRowCount} columns={columnCount} " +
+            $"hiddenBodyRows={FormatHiddenRows(hiddenRows, startRow)} " +
+            $"hiddenColumns={FormatHiddenColumns(hiddenColumns, startColumn)}");
+
+        return new ForceTableSnapshot
+        {
+            ObjectApiName = objectApiName,
+            CriteriaRow = Array.Empty<object?>(),
+            HeaderLabels = headerLabels,
+            HeaderApiNames = headerApiNames,
+            Body = body,
+            StartRow = startRow,
+            StartColumn = startColumn,
+            HiddenRowIndices = hiddenRows,
+            HiddenColumnIndices = hiddenColumns,
+        };
+    }
+
     private static Dictionary<int, object?> ReadHeaderRowMap(
         Worksheet worksheet,
         int headerSheetRow,
@@ -250,6 +345,30 @@ public static class ForceTableReader
         return single;
     }
 
+    internal static object?[] ReadCriteriaRowSlice(Worksheet worksheet, int row, int startColumn, int width)
+    {
+        var endColumn = startColumn + Math.Max(0, width - 1);
+        var start = (Range)worksheet.Cells[row, startColumn];
+        var end = (Range)worksheet.Cells[row, endColumn];
+        var rowRange = worksheet.Range[start, end];
+        var raw = rowRange.Value2;
+
+        if (raw is object[,] block)
+        {
+            var cells = new object?[width];
+            for (var c = 0; c < width; c++)
+            {
+                cells[c] = block[1, c + 1];
+            }
+
+            return cells;
+        }
+
+        var normalized = new object?[width];
+        normalized[0] = raw;
+        return normalized;
+    }
+
     private static object?[] ReadCriteriaRow(Range table, int columnCount)
     {
         var criteria = new object?[Math.Max(0, columnCount - 1)];
@@ -261,7 +380,7 @@ public static class ForceTableReader
         return criteria;
     }
 
-    private static IReadOnlyDictionary<int, IReadOnlyList<string>> ReadCriteriaReferenceIds(
+    internal static IReadOnlyDictionary<int, IReadOnlyList<string>> ReadCriteriaReferenceIds(
         Worksheet worksheet,
         object?[] criteria)
     {

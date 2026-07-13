@@ -74,7 +74,7 @@ public static class ForceTableBinder
         var boundSnapshot = new ForceTableSnapshot
         {
             ObjectApiName = snapshot.ObjectApiName,
-            CriteriaRow = TrimCriteria(snapshot.CriteriaRow, columns.Count),
+            CriteriaRow = snapshot.CriteriaRow,
             HeaderLabels = TrimHeaders(snapshot.HeaderLabels, columns.Count),
             HeaderApiNames = TrimApiNames(snapshot.HeaderApiNames, columns.Count),
             Body = TrimBody(snapshot.Body, columns.Count),
@@ -118,20 +118,6 @@ public static class ForceTableBinder
 
         var trimmed = new string?[columnCount];
         Array.Copy(apiNames, trimmed, Math.Min(apiNames.Length, columnCount));
-        return trimmed;
-    }
-
-    private static object?[] TrimCriteria(object?[] criteria, int columnCount)
-    {
-        // Criteria are columns 2..N of the table (length ColumnCount - 1).
-        var expected = Math.Max(0, columnCount - 1);
-        if (criteria.Length == expected)
-        {
-            return criteria;
-        }
-
-        var trimmed = new object?[expected];
-        Array.Copy(criteria, trimmed, Math.Min(criteria.Length, expected));
         return trimmed;
     }
 

@@ -167,8 +167,16 @@ public static class AddInHost
 
     private static void RunWizard()
     {
-        EnsureLoggedInAndRefreshUi(Services.Gate);
         var excel = (ExcelApplication)ExcelDnaUtil.Application;
+        if (!WorkbookContextGuard.TryRequireContext(excel, WorkbookContextRequirement.Worksheet))
+        {
+            ErrorDialogWindow.Show(
+                AddInTitle,
+                WorkbookContextGuard.GetMessage(WorkbookContextRequirement.Worksheet));
+            return;
+        }
+
+        EnsureLoggedInAndRefreshUi(Services.Gate);
         var selection = (Range)excel.Selection;
         var anchor = PromptAnchorCell(excel, selection.Row, selection.Column);
         if (anchor < 0)
@@ -233,8 +241,16 @@ public static class AddInHost
 
     private static void RunDescribe()
     {
-        EnsureLoggedInAndRefreshUi(Services.Gate);
         var excel = (ExcelApplication)ExcelDnaUtil.Application;
+        if (!WorkbookContextGuard.TryRequireContext(excel, WorkbookContextRequirement.Workbook))
+        {
+            ErrorDialogWindow.Show(
+                AddInTitle,
+                WorkbookContextGuard.GetMessage(WorkbookContextRequirement.Workbook));
+            return;
+        }
+
+        EnsureLoggedInAndRefreshUi(Services.Gate);
         var client = Services.CreateDataClient();
         var options = LoadOptions();
         var objects = ExcelStaAsyncHost.Run(
@@ -312,8 +328,16 @@ public static class AddInHost
         bool confirmIncludeHidden = false,
         bool confirmInsert = false)
     {
-        EnsureLoggedInAndRefreshUi(Services.Gate);
         var excel = (ExcelApplication)ExcelDnaUtil.Application;
+        if (!WorkbookContextGuard.TryRequireContext(excel, WorkbookContextRequirement.SalesforceConnectorTable))
+        {
+            ErrorDialogWindow.Show(
+                AddInTitle,
+                WorkbookContextGuard.GetMessage(WorkbookContextRequirement.SalesforceConnectorTable));
+            return;
+        }
+
+        EnsureLoggedInAndRefreshUi(Services.Gate);
         var sheet = (Worksheet)excel.ActiveSheet;
         ForceTableSnapshot snapshot;
         try

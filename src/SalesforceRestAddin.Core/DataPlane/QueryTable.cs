@@ -14,6 +14,8 @@ public sealed class QueryTableInput
 {
     public required ForceTableSnapshot Snapshot { get; init; }
 
+    public SObjectDescribe? Describe { get; init; }
+
     public ConnectorOptions Options { get; init; } = ConnectorOptions.Default;
 
     public bool ConfirmQueryTableDownload { get; init; }
@@ -63,8 +65,8 @@ public static class QueryTable
     {
         SessionFlowTrace.Log($"QueryTable: object={input.Snapshot.ObjectApiName}");
 
-        var describe = await client.DescribeAsync(input.Snapshot.ObjectApiName, cancellationToken)
-            .ConfigureAwait(false);
+        var describe = input.Describe
+            ?? await client.DescribeAsync(input.Snapshot.ObjectApiName, cancellationToken).ConfigureAwait(false);
         var bindResult = ForceTableBinder.Bind(input.Snapshot, describe);
         if (!bindResult.Succeeded)
         {
@@ -137,8 +139,8 @@ public static class QueryTable
 
         SessionFlowTrace.Log($"QueryTable paged: object={input.Snapshot.ObjectApiName}");
 
-        var describe = await client.DescribeAsync(input.Snapshot.ObjectApiName, cancellationToken)
-            .ConfigureAwait(false);
+        var describe = input.Describe
+            ?? await client.DescribeAsync(input.Snapshot.ObjectApiName, cancellationToken).ConfigureAwait(false);
         var bindResult = ForceTableBinder.Bind(input.Snapshot, describe);
         if (!bindResult.Succeeded)
         {
@@ -316,8 +318,8 @@ public static class QueryTable
         QueryTableInput input,
         CancellationToken cancellationToken)
     {
-        var describe = await client.DescribeAsync(input.Snapshot.ObjectApiName, cancellationToken)
-            .ConfigureAwait(false);
+        var describe = input.Describe
+            ?? await client.DescribeAsync(input.Snapshot.ObjectApiName, cancellationToken).ConfigureAwait(false);
         var bindResult = ForceTableBinder.Bind(input.Snapshot, describe);
         if (!bindResult.Succeeded)
         {

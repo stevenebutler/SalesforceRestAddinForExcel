@@ -10,7 +10,7 @@ See also: [common-performance-requirements.md](./common-performance-requirements
 
 ## Summary
 
-User picks one or more Salesforce objects; add-in creates a **new worksheet per object** with a field metadata grid (API names, types, lengths, flags, picklists, etc.). Used to design valid ForceConnector tables and understand object shape.
+User picks one or more Salesforce objects; add-in creates a **new worksheet per object** with a field metadata grid (API names, types, lengths, flags, picklists, etc.). Used to design valid Salesforce Connector tables and understand object shape.
 
 ---
 
@@ -19,6 +19,7 @@ User picks one or more Salesforce objects; add-in creates a **new worksheet per 
 ### FR-DSO-1 Session
 
 - Require authenticated session before object picker.
+- If Excel has no workbook open, prompt the user to create or open a workbook before continuing.
 
 ### FR-DSO-2 Object selection UI
 

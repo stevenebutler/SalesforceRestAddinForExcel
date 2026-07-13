@@ -150,7 +150,7 @@ Shared steps live in `Tables/`, `Soql/`, `Values/`. The operation file sequences
 
 - Parse row-1 triplets (`Soql/`) → WHERE
 - Build `SELECT … FROM … WHERE …`
-- Reference `in`/`on`: batched `IN` clauses (not one SOQL per Id)
+- `Id`/reference `in`/`on`: batched `IN` clauses (not one SOQL per Id)
 - Paginate `GET /query`; optional COUNT before large downloads
 - Project rows to `object[,]`; `#N/F` / `#Err` when needed
 

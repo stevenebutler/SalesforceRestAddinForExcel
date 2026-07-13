@@ -57,19 +57,23 @@ public static class DataOperationHost
         SessionFlowTrace.BeginScope("Query Table Data");
 
         var services = Services;
+        var excel = (ExcelApplication)ExcelDnaUtil.Application;
+        if (!WorkbookContextGuard.TryRequireContext(excel, WorkbookContextRequirement.SalesforceConnectorTable))
+        {
+            ErrorDialogWindow.Show(
+                AddInHost.AddInTitle,
+                WorkbookContextGuard.GetMessage(WorkbookContextRequirement.SalesforceConnectorTable));
+            return;
+        }
+
         AddInHost.EnsureLoggedInAndRefreshUi(services.Gate);
 
-        var session = SessionContext.Current;
-        SessionFlowTrace.Log(
-            $"Session instance={session.InstanceUrl} apiVersion={session.ApiVersion} object from active cell");
-
-        var excel = (ExcelApplication)ExcelDnaUtil.Application;
         var sheet = (ExcelWorksheet)excel.ActiveSheet;
         var activeCell = (ExcelRange)excel.ActiveCell;
-        ForceTableSnapshot snapshot;
+        ForceTableSnapshot shell;
         try
         {
-            snapshot = ForceTableReader.Capture(excel, sheet, activeCell);
+            shell = ForceTableReader.CaptureShell(excel, sheet, activeCell);
         }
         catch (InvalidOperationException ex)
         {
@@ -77,12 +81,50 @@ public static class DataOperationHost
             return;
         }
 
-        var options = LoadOptions();
         var client = services.CreateDataClient();
+        var describe = ExcelStaAsyncHost.Run(
+            "Loading metadata…",
+            excel,
+            (ct, report) =>
+            {
+                report($"Describing {shell.ObjectApiName}…");
+                return client.DescribeAsync(shell.ObjectApiName, ct);
+            });
+        var catalog = new FieldCatalog(describe);
+        var criteriaRead = CriteriaRowReader.Read(
+            shell.StartRow,
+            shell.StartColumn + 1,
+            (startColumn, width) => ForceTableReader.ReadCriteriaRowSlice(sheet, shell.StartRow, startColumn, width),
+            catalog);
+        if (!criteriaRead.Succeeded)
+        {
+            ErrorDialogWindow.Show(AddInHost.AddInTitle, criteriaRead.Error!.Message);
+            return;
+        }
+
+        var criteriaReferenceIds = ForceTableReader.ReadCriteriaReferenceIds(sheet, criteriaRead.CriteriaRow);
+        var options = LoadOptions();
+        var session = SessionContext.Current;
+        SessionFlowTrace.Log(
+            $"Session instance={session.InstanceUrl} apiVersion={session.ApiVersion} object from active cell");
+
         var input = new QueryTableInput
         {
-            Snapshot = snapshot,
+            Snapshot = new ForceTableSnapshot
+            {
+                ObjectApiName = shell.ObjectApiName,
+                CriteriaRow = criteriaRead.CriteriaRow,
+                CriteriaReferenceIds = criteriaReferenceIds,
+                HeaderLabels = shell.HeaderLabels,
+                HeaderApiNames = shell.HeaderApiNames,
+                Body = shell.Body,
+                StartRow = shell.StartRow,
+                StartColumn = shell.StartColumn,
+                HiddenRowIndices = shell.HiddenRowIndices,
+                HiddenColumnIndices = shell.HiddenColumnIndices,
+            },
             Options = options,
+            Describe = describe,
         };
 
         if (!options.NoConfirmQueryDownload)
@@ -137,7 +179,7 @@ public static class DataOperationHost
                         client,
                         new QueryTableInput
                         {
-                            Snapshot = snapshot,
+                            Snapshot = input.Snapshot,
                             Options = options,
                             ConfirmQueryTableDownload = !options.NoConfirmQueryDownload,
                             Progress = report,

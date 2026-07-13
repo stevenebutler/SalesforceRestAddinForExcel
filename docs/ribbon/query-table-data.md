@@ -19,13 +19,14 @@ Parse WHERE criteria from **row 1**, run SOQL against the table’s object, pagi
 ### FR-QTD-1 Preconditions
 
 1. Authenticated session.
-2. Valid ForceConnector table under the selection/active cell:
+2. If Excel has no usable worksheet context, abort early with a prompt to open a workbook containing a Salesforce Connector table.
+3. Valid Salesforce Connector table under the selection/active cell:
    - **Multi-table sheets:** tables are separated by **at least one blank column** in the header row. From the selected cell, scan the header row **left** to the start of the contiguous non-blank header block (or column A). The object name is in the cell **above that first column**. If that cell has no valid entity name, **abort** with an error citing the cell address.
    - Object name in the row 1 anchor cell (API name in comment, or value when no comment).
    - Headers in row 2 of the same column span.
    - **Record Id** (Salesforce primary key from describe metadata) is **required** somewhere in the row-2 header block. The wizard places it first (aligned with the row 1 object cell); other column positions are allowed if Id is present and resolvable.
    - Field headers resolve to API names via **describe metadata** (`FieldCatalog`): prefer row-2 comment `API Name: …`, then field label match, then API-name fallback.
-3. Query results, clears, Id write-back, and error notes/colour apply only within that table’s column range (never from sheet column A unless the table starts there).
+4. Query results, clears, Id write-back, and error notes/colour apply only within that table’s column range (never from sheet column A unless the table starts there).
 
 ### FR-QTD-2 Clear body
 
@@ -68,9 +69,9 @@ Starting column B, read repeating triplets: `[field label or API] | [operator] |
 
 **Validation errors** must cite the offending cell address.
 
-### FR-QTD-4 Hidden legacy reference-list compatibility (`in` on reference field)
+### FR-QTD-4 Hidden legacy reference-list compatibility (`in` on `Id` / reference fields)
 
-- `in` is not a visible Table Query Wizard operator. It remains accepted for ForceConnector-style sheets.
+- `in` is not a visible Table Query Wizard operator. It remains accepted for Salesforce Connector-style sheets.
 - Its value cell must name an Excel range or named range containing Salesforce record Ids. Empty cells and non-Id values in that range are ignored; no valid Ids is a validation error citing the criteria cell.
 - Comma-separated Id text is not a supported reference-list input.
 - `in` executes as a normal matching query over the supplied Id set.

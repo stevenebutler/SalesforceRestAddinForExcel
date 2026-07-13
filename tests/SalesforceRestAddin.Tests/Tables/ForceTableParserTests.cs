@@ -154,6 +154,31 @@ public sealed class ForceTableParserTests
     }
 
     [Test]
+    public async Task T_TBL_10_Bind_Preserves_Expanded_Criteria_Row()
+    {
+        var snapshot = new ForceTableSnapshot
+        {
+            ObjectApiName = "Account",
+            CriteriaRow = new object?[]
+            {
+                "Name", "equals", "A",
+                "Industry", "equals", "B",
+                "Website", "equals", "C",
+                "Name", "equals", "D",
+                "Industry", "equals", "E",
+            },
+            HeaderLabels = new object?[] { "Account ID", "Account Name", "Industry" },
+            HeaderApiNames = new string?[] { "Id", "Name", "Industry" },
+            Body = new object?[0, 3],
+        };
+
+        var result = ForceTableBinder.Bind(snapshot, AccountDescribe);
+
+        await Assert.That(result.Succeeded).IsTrue();
+        await Assert.That(result.Binding!.Snapshot.CriteriaRow.Length).IsEqualTo(15);
+    }
+
+    [Test]
     public async Task T_TBL_13_Bind_Preserves_StartRow_And_StartColumn()
     {
         var snapshot = ForceTableSnapshots.ValidAccountTableAt(startRow: 10, startColumn: 5);

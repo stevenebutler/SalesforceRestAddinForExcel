@@ -118,16 +118,44 @@ public sealed class SoqlQueryBuilderTests
     }
 
     [Test]
-    public async Task T_SOQL_15_Reference_In_Requires_Excel_Range()
+    public async Task T_SOQL_15_Id_Range_Is_Batched()
     {
-        var result = await ParseAsync("Parent Account", "in", "001000000000001,001000000000002");
+        var criteria = new object?[] { "Record Id", "in", "AccountIds" };
+        var result = await SoqlCriteriaParser.ParseAsync(
+            criteria,
+            Catalog,
+            ConnectorOptions.Default,
+            null,
+            criteriaReferenceIds: new Dictionary<int, IReadOnlyList<string>>
+            {
+                [2] = ["001000000000001", "001000000000002"],
+            });
+
+        await Assert.That(result.WhereClause).IsEqualTo(string.Empty);
+        await Assert.That(result.ReferenceJoinField).IsEqualTo("Id");
+        await Assert.That(result.ReferenceJoinIds).IsEquivalentTo(new[] { "001000000000001", "001000000000002" });
+    }
+
+    [Test]
+    public async Task T_SOQL_15a_In_Requires_Excel_Range()
+    {
+        var result = await ParseAsync("Record Id", "in", "001000000000001,001000000000002");
 
         await Assert.That(result.Succeeded).IsFalse();
         await Assert.That(result.Errors[0].Message).Contains("Excel range or named range");
     }
 
     [Test]
-    public async Task T_SOQL_15a_On_Is_Rejected_With_In_Guidance()
+    public async Task T_SOQL_15b_In_Is_Rejected_On_Non_Reference_Non_Id_Fields()
+    {
+        var result = await ParseAsync("Account Name", "in", "AccountIds");
+
+        await Assert.That(result.Succeeded).IsFalse();
+        await Assert.That(result.Errors[0].Message).IsEqualTo("in is only valid on Id or reference fields.");
+    }
+
+    [Test]
+    public async Task T_SOQL_15c_On_Is_Rejected_With_In_Guidance()
     {
         var result = await ParseAsync("Parent Account", "on", "CustomerIds");
 
@@ -137,7 +165,7 @@ public sealed class SoqlQueryBuilderTests
     }
 
     [Test]
-    public async Task T_SOQL_15b_Multipicklist_Excludes_Is_Preserved()
+    public async Task T_SOQL_15d_Multipicklist_Excludes_Is_Preserved()
     {
         var catalog = CatalogWith(new FieldDescriptor
         {
@@ -156,7 +184,7 @@ public sealed class SoqlQueryBuilderTests
     }
 
     [Test]
-    public async Task T_SOQL_15c_Reference_Range_Is_Split_Into_Batches()
+    public async Task T_SOQL_15e_Reference_Range_Is_Split_Into_Batches()
     {
         var batches = SoqlQueryBuilder.BuildReferenceInBatches(
             ["001000000000001", "001000000000002", "001000000000003"],

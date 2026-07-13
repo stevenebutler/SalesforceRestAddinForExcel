@@ -70,7 +70,7 @@ Created On | equals       | TODAY       -> CreatedDate = TODAY
 
 ## Hidden ForceConnector Reference-List Syntax
 
-`in` is deliberately absent from the wizard but remains available in existing ForceConnector-style sheets for reference fields. Its value must be an Excel range address or named range containing Salesforce Ids, not a comma-separated list.
+`in` is deliberately absent from the wizard but remains available in existing ForceConnector-style sheets for `Id` and reference fields. Its value must be an Excel range address or named range containing Salesforce Ids, not a comma-separated list.
 
 Example with a named range `CustomerIds`:
 

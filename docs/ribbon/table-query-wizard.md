@@ -10,7 +10,7 @@ See also: [common-performance-requirements.md](./common-performance-requirements
 
 ## Summary
 
-Guided flow: Excel **InputBox** for the sheet anchor → WPF steps (object → fields → WHERE) → lay out the **ForceConnector table** → automatically run **Query Table Data**. The destination cell address is shown at the top of every WPF step.
+Guided flow: Excel **InputBox** for the sheet anchor → WPF steps (object → fields → WHERE) → lay out the **Salesforce Connector table** → automatically run **Query Table Data**. The destination cell address is shown at the top of every WPF step.
 
 ---
 
@@ -19,6 +19,7 @@ Guided flow: Excel **InputBox** for the sheet anchor → WPF steps (object → f
 ### FR-TQW-1 Session
 
 - If not authenticated, prompt login via `SessionGate` before the anchor prompt.
+- If Excel has no usable worksheet context, prompt the user to create or open a workbook before continuing.
 - On login failure, abort with clear message (no partial table).
 
 ### FR-TQW-2 Anchor cell (Excel InputBox, before WPF)
@@ -59,7 +60,7 @@ Grid sorting follows the shared rule used by other WPF pickers:
 ### FR-TQW-5 Step 3 — Query clauses
 
 - UI to build zero or more WHERE triplets: `[field] | [operator] | [value]`.
-- Operators are `equals`, `not equals`, `like`, `starts with`, `ends with`, `less than`, `greater than`, `includes`, `excludes`, and `regexp`; value rules match [query-table-data.md](./query-table-data.md) (FR-QTD-3). `in` is hidden ForceConnector compatibility syntax, not a wizard choice; `on` is rejected with guidance to use `in`.
+- Operators are `equals`, `not equals`, `like`, `starts with`, `ends with`, `less than`, `greater than`, `includes`, `excludes`, and `regexp`; value rules match [query-table-data.md](./query-table-data.md) (FR-QTD-3). `in` is hidden Salesforce Connector compatibility syntax, not a wizard choice; it is accepted for `Id` and reference fields. `on` is rejected with guidance to use `in`.
 - If user adds no clauses, default: `RECORD ID | not equals | (empty)` — equivalent to “all records” semantics via empty-id filter.
 - Show destination cell at the top.
 - **Run Query** writes triplets into **row 1** starting at column B (field label in cell, API name in comment where needed).
