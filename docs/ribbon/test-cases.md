@@ -265,6 +265,7 @@ Status column left blank for implementation tracking.
 |----|-----|------|-----|
 | T-COM-01 | VBA | Each of six COM methods calls the same `DataPlane` method as ribbon | Unit |
 | T-COM-02 | VBA | `RefreshTableDataApi` passes refresh flag to `QueryRows` | Unit |
+| T-COM-03 | VBA | Each COM method returns only after its operation and worksheet writes terminate; ribbon callbacks queue the same operation exactly once | Windows smoke |
 
 ---
 

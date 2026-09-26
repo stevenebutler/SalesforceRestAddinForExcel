@@ -115,42 +115,41 @@ public static class AddInHost
         SalesforceRestAddinRibbon.RefreshSessionDependentUi();
     }
 
+    // Ribbon callbacks queue these entry points before calling us. COM/VBA calls enter
+    // directly so the automation method does not return until the operation terminates.
     private static void RunGated(string operationName, System.Action operation)
     {
-        ExcelAsyncUtil.QueueAsMacro(() =>
+        if (!OperationGate.TryEnter())
         {
-            if (!OperationGate.TryEnter())
-            {
-                return;
-            }
+            return;
+        }
 
-            try
-            {
-                SessionFlowTrace.ResetForOperation(operationName);
-                operation();
-            }
-            catch (SalesforceLoginCancelledException ex)
-            {
-                ShowLoginError("Sign-in was cancelled", ex.Message, Services.Gate.LastDiagnostics);
-            }
-            catch (SalesforceLoginFailedException ex)
-            {
-                ShowLoginError("Sign-in failed", ex.Message, ex.Diagnostics ?? Services.Gate.LastDiagnostics);
-            }
-            catch (Exception ex)
-            {
-                SessionFlowTrace.LogException(operationName, ex);
-                var details = ExceptionDetailFormatter.Format(operationName, ex)
-                    + Environment.NewLine
-                    + Environment.NewLine
-                    + SessionFlowTrace.FormatRecent();
-                ErrorDialogWindow.Show(AddInTitle, details);
-            }
-            finally
-            {
-                OperationGate.Exit();
-            }
-        });
+        try
+        {
+            SessionFlowTrace.ResetForOperation(operationName);
+            operation();
+        }
+        catch (SalesforceLoginCancelledException ex)
+        {
+            ShowLoginError("Sign-in was cancelled", ex.Message, Services.Gate.LastDiagnostics);
+        }
+        catch (SalesforceLoginFailedException ex)
+        {
+            ShowLoginError("Sign-in failed", ex.Message, ex.Diagnostics ?? Services.Gate.LastDiagnostics);
+        }
+        catch (Exception ex)
+        {
+            SessionFlowTrace.LogException(operationName, ex);
+            var details = ExceptionDetailFormatter.Format(operationName, ex)
+                + Environment.NewLine
+                + Environment.NewLine
+                + SessionFlowTrace.FormatRecent();
+            ErrorDialogWindow.Show(AddInTitle, details);
+        }
+        finally
+        {
+            OperationGate.Exit();
+        }
     }
 
     private static void ShowLoginError(string title, string message, SessionLoginDiagnostics? diagnostics)
