@@ -34,6 +34,7 @@ Map to [`ConnectorOptions`](../../src/SalesforceRestAddin.Core/Session/Connector
 | No Query Limit | `NoQueryLimit` | false | Skip 3,500 row / 20 col caps on query-rows, delete, update limits |
 | Enable Auto Assign Rule | `AutoAssignRule` | false | When false (default), send `Sforce-Auto-Assign: FALSE` on create/update |
 | Include Hidden Columns/Rows | `IncludeHiddenCells` | false | When unchecked (default), update omits AutoFilter/manually hidden rows/columns — see [update-selected-cells.md](./update-selected-cells.md) |
+| Use native Excel writes (experimental) | `UseNativeExcelWrites` | false | Use Excel-DNA `ExcelReference.SetValue` for bulk worksheet value writes |
 | Column sizing | `ColumnSizingMode` | First downloaded page | Fit columns to the first downloaded page, all downloaded data, or headers only |
 | Row sizing | `RowSizingMode` | Force to single line | Force a single line, fit rows as each page downloads, or leave rows unchanged |
 
@@ -46,6 +47,8 @@ Map to [`ConnectorOptions`](../../src/SalesforceRestAddin.Core/Session/Connector
 ### FR-OPT-4 Persistence
 
 Sizing modes are persisted as the string values `columnSizingMode` and `rowSizingMode`.
+The experimental native-write flag is persisted as the boolean `useNativeExcelWrites`.
+The native path writes one rectangular constant array per result/page and clears Excel's undo history.
 Missing sizing values use their defaults; the legacy `disableAutomaticSizing` setting is ignored.
 Malformed settings JSON resets all options to defaults and logs a warning. An invalid recognized
 setting value defaults only that setting and is included in one warning for the load.
@@ -94,6 +97,7 @@ setting value defaults only that setting and is included in one warning for the 
 | `NoQueryLimit` | Query rows, delete, update |
 | `AutoAssignRule` | Insert, update |
 | `IncludeHiddenCells` | Update |
+| `UseNativeExcelWrites` | Query table, query rows, refresh table |
 
 ---
 

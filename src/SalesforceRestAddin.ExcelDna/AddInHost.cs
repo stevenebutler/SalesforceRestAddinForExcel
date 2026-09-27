@@ -336,8 +336,12 @@ public static class AddInHost
             return;
         }
 
-        EnsureLoggedInAndRefreshUi(Services.Gate);
         var sheet = (Worksheet)excel.ActiveSheet;
+        var options = LoadOptions();
+        var nativeSheetId = options.UseNativeExcelWrites
+            ? SheetProjectionWriter.CaptureNativeSheetId(sheet)
+            : (IntPtr?)null;
+        EnsureLoggedInAndRefreshUi(Services.Gate);
         ForceTableSnapshot snapshot;
         try
         {
@@ -379,8 +383,6 @@ public static class AddInHost
             return;
         }
 
-        var options = LoadOptions();
-
         if (confirmDelete && !ConfirmationDialogWindow.Show(
                 AddInTitle,
                 FormatRecordCountConfirm("Delete", selection.BodyRowIndices.Count, "from", binding.Describe.Label)
@@ -408,6 +410,9 @@ public static class AddInHost
         }
 
         DataOperationResult result;
+        using var filterScope = options.UseNativeExcelWrites
+            ? AutoFilterWriteScope.Suspend(sheet)
+            : null;
         try
         {
             result = ExcelStaAsyncHost.Run(
@@ -425,7 +430,7 @@ public static class AddInHost
             return;
         }
 
-        DataOperationHost.ApplyResult(sheet, result, options, binding, excel);
+        DataOperationHost.ApplyResult(sheet, result, options, binding, excel, nativeSheetId);
     }
 
     private static string GetOperationTitle(
@@ -525,8 +530,9 @@ public static class AddInHost
         DataOperationResult result,
         ConnectorOptions options,
         ForceTableBinding? binding = null,
-        ExcelApplication? excel = null) =>
-        DataOperationHost.ApplyResult(sheet, result, options, binding, excel);
+        ExcelApplication? excel = null,
+        IntPtr? nativeSheetId = null) =>
+        DataOperationHost.ApplyResult(sheet, result, options, binding, excel, nativeSheetId);
 
     private static ForceTableSelection ReadSelection(ExcelApplication excel, ForceTableSnapshot snapshot)
     {

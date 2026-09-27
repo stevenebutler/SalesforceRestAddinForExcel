@@ -20,6 +20,7 @@ public sealed class JsonConnectorOptionsStoreTests
         await Assert.That(loaded.NoQueryLimit).IsFalse();
         await Assert.That(loaded.AutoAssignRule).IsFalse();
         await Assert.That(loaded.IncludeHiddenCells).IsFalse();
+        await Assert.That(loaded.UseNativeExcelWrites).IsFalse();
         await Assert.That(loaded.ColumnSizingMode).IsEqualTo(ColumnSizingMode.FirstDownloadedPage);
         await Assert.That(loaded.RowSizingMode).IsEqualTo(RowSizingMode.ForceSingleLine);
         await Assert.That(loaded.CompositeBatchSize).IsEqualTo(200);
@@ -35,6 +36,7 @@ public sealed class JsonConnectorOptionsStoreTests
 
         await Assert.That(loaded.AutoAssignRule).IsFalse();
         await Assert.That(loaded.IncludeHiddenCells).IsFalse();
+        await Assert.That(loaded.UseNativeExcelWrites).IsFalse();
         await Assert.That(loaded.ColumnSizingMode).IsEqualTo(ColumnSizingMode.FirstDownloadedPage);
         await Assert.That(loaded.RowSizingMode).IsEqualTo(RowSizingMode.ForceSingleLine);
 
@@ -151,6 +153,7 @@ public sealed class JsonConnectorOptionsStoreTests
             NoQueryLimit = true,
             AutoAssignRule = true,
             IncludeHiddenCells = true,
+            UseNativeExcelWrites = true,
             ColumnSizingMode = ColumnSizingMode.HeadersOnly,
             RowSizingMode = RowSizingMode.ForceSingleLine,
         };
@@ -164,6 +167,7 @@ public sealed class JsonConnectorOptionsStoreTests
         await Assert.That(loaded.NoQueryLimit).IsTrue();
         await Assert.That(loaded.AutoAssignRule).IsTrue();
         await Assert.That(loaded.IncludeHiddenCells).IsTrue();
+        await Assert.That(loaded.UseNativeExcelWrites).IsTrue();
         await Assert.That(loaded.ColumnSizingMode).IsEqualTo(ColumnSizingMode.HeadersOnly);
         await Assert.That(loaded.RowSizingMode).IsEqualTo(RowSizingMode.ForceSingleLine);
         await Assert.That(loaded.SendPreventAutoAssignHeader).IsFalse();
@@ -182,6 +186,28 @@ public sealed class JsonConnectorOptionsStoreTests
 
         await Assert.That(loaded.AutoAssignRule).IsFalse();
         await Assert.That(loaded.SendPreventAutoAssignHeader).IsTrue();
+
+        File.Delete(path);
+    }
+
+    [Test]
+    public async Task Load_InvalidNativeExcelWrites_DefaultsOnlyThatSetting_And_LogsWarning()
+    {
+        var path = WriteTemp(
+            """
+            {
+              "useReference": true,
+              "useNativeExcelWrites": "yes"
+            }
+            """);
+        var warnings = new List<string>();
+
+        var loaded = new JsonConnectorOptionsStore(path, warnings.Add).Load();
+
+        await Assert.That(loaded.UseReference).IsTrue();
+        await Assert.That(loaded.UseNativeExcelWrites).IsFalse();
+        await Assert.That(warnings.Count).IsEqualTo(1);
+        await Assert.That(warnings[0]).Contains("useNativeExcelWrites");
 
         File.Delete(path);
     }

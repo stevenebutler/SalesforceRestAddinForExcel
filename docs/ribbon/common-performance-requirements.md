@@ -24,7 +24,7 @@ Prefer bulk range I/O. Do **not** read or write worksheet data cell-by-cell in h
 ### Write path
 
 1. Build `object[,]` (or column-scoped arrays) in memory from Salesforce responses.
-2. Assign with **one** `Range.Value` per contiguous rectangle via `SheetProjectionWriter` (not per-row cell writes).
+2. Assign each contiguous rectangle in one operation via `SheetProjectionWriter`: `Range.Value2` by default, or native `ExcelReference.SetValue` (`xlSet`) when the experimental option is enabled. Do not write per row or per cell.
 3. Apply **number formats** at **column** or **range** scope before or after the bulk value assign.
 4. After write, apply the selected sizing policies: columns fit all pages, the first page, or headers only; rows fit and cap at **3×** `StandardHeight`, force standard-height single lines, or remain unchanged. Keep range-level operations bulk; the capped-row path is the only O(rows) exception.
 5. Do not set comments, interior color, or validation **per cell** in the hot path. Batch error annotation where possible (see Error feedback).
@@ -46,7 +46,7 @@ Treat each property get/set on `Excel.Range` / `Excel.Worksheet` as expensive.
 
 | Operation | Target |
 |-----------|--------|
-| Query results | Single `object[,]` → one `Range.Value` |
+| Query results | Single `object[,]` → one `Range.Value2` or native `xlSet` |
 | Update (default, skip hidden) | `todo.Value` bulk read + filter hidden indices in memory |
 | Update (include hidden) | Same bulk read; no hidden filter |
 | Insert | Read selected row slice as `object[,]` once per chunk |
@@ -169,8 +169,14 @@ Prefer recording errors in a Core result DTO; ExcelDna applies visuals in one pa
 | `NoQueryLimit` | Skip maxRows/maxCols checks |
 | `AutoAssignRule` | When false, suppress auto-assignment header |
 | `IncludeHiddenCells` | When false (default), update omits hidden rows/columns; when true, include them |
+| `UseNativeExcelWrites` | When true, bulk value arrays use Excel-DNA `ExcelReference.SetValue` (`xlSet`); default false while filtered-sheet behavior is validated |
 | `ColumnSizingMode` | Fit columns to the first downloaded page (default), all downloaded data, or headers only |
 | `RowSizingMode` | Force standard-height single lines (default), fit rows per page, or leave rows unchanged |
+
+The native write path captures active worksheet/table AutoFilter criteria, exposes all
+filtered rows for the full streamed write, and reapplies the criteria once after the last
+page. This avoids mapping bulk arrays while worksheet rows are filtered and makes the
+filter reflect the newly written values.
 
 ## Testability
 

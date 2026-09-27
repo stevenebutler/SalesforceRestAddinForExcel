@@ -66,9 +66,13 @@ public static class DataOperationHost
             return;
         }
 
+        var sheet = (ExcelWorksheet)excel.ActiveSheet;
+        var options = LoadOptions();
+        var nativeSheetId = options.UseNativeExcelWrites
+            ? SheetProjectionWriter.CaptureNativeSheetId(sheet)
+            : (IntPtr?)null;
         AddInHost.EnsureLoggedInAndRefreshUi(services.Gate);
 
-        var sheet = (ExcelWorksheet)excel.ActiveSheet;
         var activeCell = (ExcelRange)excel.ActiveCell;
         ForceTableSnapshot shell;
         try
@@ -103,7 +107,6 @@ public static class DataOperationHost
         }
 
         var criteriaReferenceIds = ForceTableReader.ReadCriteriaReferenceIds(sheet, criteriaRead.CriteriaRow);
-        var options = LoadOptions();
         var session = SessionContext.Current;
         SessionFlowTrace.Log(
             $"Session instance={session.InstanceUrl} apiVersion={session.ApiVersion} object from active cell");
@@ -165,7 +168,14 @@ public static class DataOperationHost
 
         DataOperationResult result;
         TimeSpan apiElapsed;
-        var pageWrites = new PagedQueryWriteState(options.ColumnSizingMode, options.RowSizingMode);
+        var pageWrites = new PagedQueryWriteState(
+            options.ColumnSizingMode,
+            options.RowSizingMode,
+            options.UseNativeExcelWrites,
+            nativeSheetId);
+        using var filterScope = options.UseNativeExcelWrites
+            ? AutoFilterWriteScope.Suspend(sheet)
+            : null;
         var queryStopwatch = Stopwatch.StartNew();
         try
         {
@@ -210,7 +220,7 @@ public static class DataOperationHost
             // reference joins and terminal error markers retain the existing result path.
             if (!pageWrites.HasPages || result.ErrorSummary is not null)
             {
-                ApplyResult(sheet, result, options, binding: null, excel);
+                ApplyResult(sheet, result, options, binding: null, excel, nativeSheetId);
             }
         }
         finally
@@ -282,7 +292,8 @@ public static class DataOperationHost
             {
                 SessionFlowTrace.Log(
                     $"QueryTable page {page.PageNumber}: Excel write start " +
-                    $"records={page.Projection.Values.GetLength(0)}");
+                    $"records={page.Projection.Values.GetLength(0)} " +
+                    $"mode={(pageWrites.UseNativeExcelWrites ? "native" : "com")}");
                 var writeStopwatch = Stopwatch.StartNew();
                 try
                 {
@@ -323,7 +334,9 @@ public static class DataOperationHost
                         rowSizingMode: pageWrites.RowSizing == RowSizingMode.FitEachPage
                             ? RowSizingMode.FitEachPage
                             : RowSizingMode.None,
-                        preserveExistingColumnWidths: pageWrites.ShouldPreserveExistingColumnWidths);
+                        preserveExistingColumnWidths: pageWrites.ShouldPreserveExistingColumnWidths,
+                        useNativeExcelWrites: pageWrites.UseNativeExcelWrites,
+                        nativeSheetId: pageWrites.NativeSheetId);
                 }
                 finally
                 {
@@ -345,7 +358,8 @@ public static class DataOperationHost
         DataOperationResult result,
         ConnectorOptions options,
         ForceTableBinding? binding = null,
-        ExcelApplication? excel = null)
+        ExcelApplication? excel = null,
+        IntPtr? nativeSheetId = null)
     {
         try
         {
@@ -362,7 +376,9 @@ public static class DataOperationHost
                     sheet,
                     result.Projection,
                     options.ColumnSizingMode,
-                    options.RowSizingMode);
+                    options.RowSizingMode,
+                    options.UseNativeExcelWrites,
+                    nativeSheetId);
             }
 
             if (binding is not null && result.RowOutcomes.Count > 0)
@@ -423,15 +439,25 @@ public static class DataOperationHost
 
     private sealed class PagedQueryWriteState
     {
-        public PagedQueryWriteState(ColumnSizingMode columnSizingMode, RowSizingMode rowSizingMode)
+        public PagedQueryWriteState(
+            ColumnSizingMode columnSizingMode,
+            RowSizingMode rowSizingMode,
+            bool useNativeExcelWrites = false,
+            IntPtr? nativeSheetId = null)
         {
             ColumnSizing = columnSizingMode;
             RowSizing = rowSizingMode;
+            UseNativeExcelWrites = useNativeExcelWrites;
+            NativeSheetId = nativeSheetId;
         }
 
         public ColumnSizingMode ColumnSizing { get; }
 
         public RowSizingMode RowSizing { get; }
+
+        public bool UseNativeExcelWrites { get; }
+
+        public IntPtr? NativeSheetId { get; }
 
         public bool HasPages { get; private set; }
 

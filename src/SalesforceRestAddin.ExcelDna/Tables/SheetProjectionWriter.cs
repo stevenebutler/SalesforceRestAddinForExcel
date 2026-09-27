@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using ExcelDna.Integration;
 using SalesforceRestAddin.Core.Session;
 using SalesforceRestAddin.Core.Tables;
 using Microsoft.Office.Interop.Excel;
@@ -15,7 +17,9 @@ public static class SheetProjectionWriter
         Worksheet worksheet,
         SheetProjection projection,
         ColumnSizingMode columnSizingMode,
-        RowSizingMode rowSizingMode)
+        RowSizingMode rowSizingMode,
+        bool useNativeExcelWrites = false,
+        IntPtr? nativeSheetId = null)
     {
         if (worksheet is null)
         {
@@ -34,7 +38,7 @@ public static class SheetProjectionWriter
             return;
         }
 
-        var target = WriteValues(worksheet, projection);
+        var target = WriteValues(worksheet, projection, useNativeExcelWrites, nativeSheetId);
         ApplyColumnFormats(target, projection.ColumnFormats);
         ApplyColumnSizing(worksheet, target, projection, rows, cols, columnSizingMode, preserveExistingColumnWidths: false);
         ApplyRowSizing(worksheet, target, rowSizingMode);
@@ -48,7 +52,9 @@ public static class SheetProjectionWriter
         bool applyColumnFormats,
         bool autoFitColumns,
         RowSizingMode rowSizingMode,
-        bool preserveExistingColumnWidths)
+        bool preserveExistingColumnWidths,
+        bool useNativeExcelWrites = false,
+        IntPtr? nativeSheetId = null)
     {
         if (worksheet is null)
         {
@@ -65,7 +71,7 @@ public static class SheetProjectionWriter
             return;
         }
 
-        var target = WriteValues(worksheet, projection);
+        var target = WriteValues(worksheet, projection, useNativeExcelWrites, nativeSheetId);
         if (applyColumnFormats)
         {
             ApplyColumnFormats(target, projection.ColumnFormats);
@@ -212,13 +218,136 @@ public static class SheetProjectionWriter
         range.Clear();
     }
 
-    private static Range WriteValues(Worksheet worksheet, SheetProjection projection)
+    private static Range WriteValues(
+        Worksheet worksheet,
+        SheetProjection projection,
+        bool useNativeExcelWrites,
+        IntPtr? nativeSheetId)
     {
         var rows = projection.Values.GetLength(0);
         var cols = projection.Values.GetLength(1);
         var target = CreateRange(worksheet, projection.StartRow, projection.StartColumn, rows, cols);
-        target.Value2 = projection.Values;
+        if (useNativeExcelWrites)
+        {
+            WriteNativeValues(worksheet, projection, rows, cols, nativeSheetId);
+        }
+        else
+        {
+            target.Value2 = projection.Values;
+        }
+
         return target;
+    }
+
+    private static void WriteNativeValues(
+        Worksheet worksheet,
+        SheetProjection projection,
+        int rowCount,
+        int columnCount,
+        IntPtr? nativeSheetId)
+    {
+        var rowFirst = projection.StartRow - 1;
+        var rowLast = rowFirst + rowCount - 1;
+        var columnFirst = projection.StartColumn - 1;
+        var columnLast = columnFirst + columnCount - 1;
+        var sheetName = GetQualifiedSheetName(worksheet);
+
+        SessionFlowTrace.Log(
+            $"Native Excel write sheet={sheetName} " +
+            $"rows={projection.StartRow}-{projection.StartRow + rowCount - 1} " +
+            $"columns={projection.StartColumn}-{projection.StartColumn + columnCount - 1}");
+        LogFirstColumnIdentityStats(projection.Values);
+
+        var failureMessage =
+            $"Excel rejected the native worksheet write to {sheetName} " +
+            $"at row {projection.StartRow}, column {projection.StartColumn}, " +
+            $"size {rowCount}x{columnCount}.";
+        XlCall.XlReturn xlReturn;
+        object result;
+        try
+        {
+            var reference = new ExcelReference(
+                rowFirst,
+                rowLast,
+                columnFirst,
+                columnLast,
+                nativeSheetId ?? CaptureNativeSheetId(worksheet));
+            xlReturn = XlCall.TryExcel(
+                XlCall.xlSet,
+                out result,
+                reference,
+                projection.Values);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(failureMessage, ex);
+        }
+
+        if (xlReturn != XlCall.XlReturn.XlReturnSuccess || result is not bool succeeded || !succeeded)
+        {
+            throw new InvalidOperationException(
+                $"{failureMessage} Excel C API result: {xlReturn}; " +
+                $"xlSet result: {result?.ToString() ?? "<null>"}.");
+        }
+    }
+
+    /// <summary>
+    /// Resolves a stable native sheet id while Excel is directly executing the initiating
+    /// macro/COM call. Streamed pages reuse it inside the nested STA progress dispatcher.
+    /// </summary>
+    internal static IntPtr CaptureNativeSheetId(Worksheet worksheet)
+    {
+        if (worksheet is null)
+        {
+            throw new ArgumentNullException(nameof(worksheet));
+        }
+
+        // The caller captures this while the target worksheet is active and Excel is
+        // directly executing the initiating macro/COM call. Avoid another xlSheetId
+        // lookup later from the nested progress dispatcher.
+        var xlReturn = XlCall.TryExcel(XlCall.xlSheetId, out var result);
+        if (xlReturn == XlCall.XlReturn.XlReturnSuccess
+            && result is ExcelReference reference
+            && reference.SheetId != IntPtr.Zero)
+        {
+            SessionFlowTrace.Log(
+                $"Native Excel sheet id captured for {GetQualifiedSheetName(worksheet)}");
+            return reference.SheetId;
+        }
+
+        throw new InvalidOperationException(
+            $"Excel rejected native sheet identification for {GetQualifiedSheetName(worksheet)}. " +
+            $"Excel C API result: {xlReturn}; result type: {result?.GetType().FullName ?? "<null>"}.");
+    }
+
+    private static string GetQualifiedSheetName(Worksheet worksheet)
+    {
+        var workbook = (Workbook)worksheet.Parent;
+        return $"'[{EscapeSheetReferencePart(workbook.Name)}]{EscapeSheetReferencePart(worksheet.Name)}'";
+    }
+
+    private static string EscapeSheetReferencePart(string value) => value.Replace("'", "''");
+
+    private static void LogFirstColumnIdentityStats(object?[,] values)
+    {
+        var rows = values.GetLength(0);
+        var distinct = new HashSet<string>(StringComparer.Ordinal);
+        var nonEmpty = 0;
+        for (var row = 0; row < rows; row++)
+        {
+            var text = values[row, 0]?.ToString();
+            if (string.IsNullOrEmpty(text))
+            {
+                continue;
+            }
+
+            nonEmpty++;
+            distinct.Add(text!);
+        }
+
+        SessionFlowTrace.Log(
+            $"Native Excel write source firstColumnNonEmpty={nonEmpty} " +
+            $"firstColumnDistinct={distinct.Count}");
     }
 
     private static Range CreateRange(

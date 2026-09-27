@@ -37,6 +37,12 @@ public sealed class ConnectorOptions
     /// </summary>
     public bool IncludeHiddenCells { get; init; }
 
+    /// <summary>
+    /// Use Excel-DNA's native Excel C API for bulk worksheet value writes.
+    /// Default false while the path is validated against filtered worksheets.
+    /// </summary>
+    public bool UseNativeExcelWrites { get; init; }
+
     /// <summary>Controls column-width sizing after Salesforce data writes.</summary>
     public ColumnSizingMode ColumnSizingMode { get; init; } = ColumnSizingMode.FirstDownloadedPage;
 

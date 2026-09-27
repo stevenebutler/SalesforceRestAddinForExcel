@@ -12,6 +12,7 @@ public sealed class OptionsWindow : Window
     private readonly CheckBox _noQueryLimit;
     private readonly CheckBox _autoAssignRule;
     private readonly CheckBox _includeHiddenCells;
+    private readonly CheckBox _useNativeExcelWrites;
     private readonly RadioButton _fitColumnsToAllData;
     private readonly RadioButton _fitColumnsToFirstPage;
     private readonly RadioButton _fitColumnsToHeadersOnly;
@@ -43,6 +44,9 @@ public sealed class OptionsWindow : Window
         _noQueryLimit = MakeCheck("No Query Limit", current.NoQueryLimit);
         _autoAssignRule = MakeCheck("Enable Auto Assign Rule", current.AutoAssignRule);
         _includeHiddenCells = MakeCheck("Include Hidden Columns/Rows", current.IncludeHiddenCells);
+        _useNativeExcelWrites = MakeCheck(
+            "Use native Excel writes (experimental)",
+            current.UseNativeExcelWrites);
         _fitColumnsToFirstPage = MakeRadio(
             "Fit columns to first downloaded page",
             "columnSizing",
@@ -72,6 +76,7 @@ public sealed class OptionsWindow : Window
         root.Children.Add(_noQueryLimit);
         root.Children.Add(_autoAssignRule);
         root.Children.Add(_includeHiddenCells);
+        root.Children.Add(_useNativeExcelWrites);
         root.Children.Add(MakeSizingGroup(
             "Column sizing",
             _fitColumnsToFirstPage,
@@ -129,16 +134,17 @@ public sealed class OptionsWindow : Window
             NoQueryLimit = _noQueryLimit.IsChecked == true,
             AutoAssignRule = _autoAssignRule.IsChecked == true,
             IncludeHiddenCells = _includeHiddenCells.IsChecked == true,
+            UseNativeExcelWrites = _useNativeExcelWrites.IsChecked == true,
             ColumnSizingMode = _fitColumnsToFirstPage.IsChecked == true
                 ? ColumnSizingMode.FirstDownloadedPage
                 : _fitColumnsToHeadersOnly.IsChecked == true
                     ? ColumnSizingMode.HeadersOnly
-                    : ColumnSizingMode.FirstDownloadedPage,
+                    : ColumnSizingMode.AllDownloadedData,
             RowSizingMode = _forceRowsToSingleLine.IsChecked == true
                 ? RowSizingMode.ForceSingleLine
                 : _doNotFitRows.IsChecked == true
                     ? RowSizingMode.None
-                    : RowSizingMode.ForceSingleLine,
+                    : RowSizingMode.FitEachPage,
             CompositeBatchSize = batch,
         };
     }
