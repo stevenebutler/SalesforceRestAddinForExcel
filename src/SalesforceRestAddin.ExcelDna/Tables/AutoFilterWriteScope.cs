@@ -6,8 +6,8 @@ using SalesforceRestAddin.Core.Session;
 namespace SalesforceRestAddin.Tables;
 
 /// <summary>
-/// Temporarily exposes rows hidden by worksheet or table AutoFilters, then restores
-/// the captured criteria against the post-write data when disposed.
+/// Keeps worksheet and table AutoFilter criteria alive while values are written,
+/// then asks Excel to evaluate those filters against the post-write data.
 /// </summary>
 internal sealed class AutoFilterWriteScope : IDisposable
 {
@@ -19,7 +19,7 @@ internal sealed class AutoFilterWriteScope : IDisposable
         _filters = filters;
     }
 
-    public static AutoFilterWriteScope Suspend(Worksheet worksheet)
+    public static AutoFilterWriteScope Preserve(Worksheet worksheet)
     {
         if (worksheet is null)
         {
@@ -39,13 +39,29 @@ internal sealed class AutoFilterWriteScope : IDisposable
             Capture(table.AutoFilter, states, ranges);
         }
 
-        foreach (var state in states)
+        SessionFlowTrace.Log($"Excel bulk write: preserved active AutoFilters={states.Count}");
+        return new AutoFilterWriteScope(states);
+    }
+
+    internal static bool HasActiveFilters(Worksheet worksheet)
+    {
+        if (worksheet.AutoFilter is AutoFilter worksheetFilter
+            && HasActiveFilter(worksheetFilter))
         {
-            state.Suspend();
+            return true;
         }
 
-        SessionFlowTrace.Log($"Excel bulk write: suspended AutoFilters={states.Count}");
-        return new AutoFilterWriteScope(states);
+        var tables = worksheet.ListObjects;
+        var tableCount = tables.Count;
+        for (var index = 1; index <= tableCount; index++)
+        {
+            if (HasActiveFilter(tables.Item[index].AutoFilter))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void Dispose()
@@ -63,7 +79,7 @@ internal sealed class AutoFilterWriteScope : IDisposable
 
         if (_filters.Count > 0)
         {
-            SessionFlowTrace.Log($"Excel bulk write: reapplied AutoFilters={_filters.Count}");
+            SessionFlowTrace.Log($"Excel bulk write: re-evaluated AutoFilters={_filters.Count}");
         }
     }
 
@@ -84,111 +100,36 @@ internal sealed class AutoFilterWriteScope : IDisposable
             return;
         }
 
-        var criteria = new List<FilterCriterion>();
+        if (HasActiveFilter(autoFilter))
+        {
+            states.Add(new FilterState(autoFilter));
+        }
+    }
+
+    private static bool HasActiveFilter(AutoFilter autoFilter)
+    {
         var filters = autoFilter.Filters;
         var filterCount = filters.Count;
         for (var field = 1; field <= filterCount; field++)
         {
-            var filter = filters.Item[field];
-            if (!filter.On)
+            if (filters.Item[field].On)
             {
-                continue;
+                return true;
             }
-
-            object criteria1;
-            try
-            {
-                criteria1 = filter.Criteria1;
-            }
-            catch
-            {
-                criteria1 = Type.Missing;
-            }
-
-            var autoFilterOperator = filter.Operator;
-            object criteria2;
-            try
-            {
-                criteria2 = filter.Criteria2;
-            }
-            catch
-            {
-                criteria2 = Type.Missing;
-            }
-
-            if (ReferenceEquals(criteria1, Type.Missing) && ReferenceEquals(criteria2, Type.Missing))
-            {
-                throw new InvalidOperationException(
-                    $"Could not preserve AutoFilter criteria for field {field} in {range.Address[false, false]}.");
-            }
-
-            criteria.Add(new FilterCriterion(field, criteria1, autoFilterOperator, criteria2));
         }
 
-        if (criteria.Count > 0)
-        {
-            states.Add(new FilterState(autoFilter, range, criteria));
-        }
+        return false;
     }
 
     private sealed class FilterState
     {
         private readonly AutoFilter _autoFilter;
-        private readonly Range _range;
-        private readonly IReadOnlyList<FilterCriterion> _criteria;
 
-        public FilterState(
-            AutoFilter autoFilter,
-            Range range,
-            IReadOnlyList<FilterCriterion> criteria)
+        public FilterState(AutoFilter autoFilter)
         {
             _autoFilter = autoFilter;
-            _range = range;
-            _criteria = criteria;
         }
 
-        public void Suspend() => _autoFilter.ShowAllData();
-
-        public void Restore()
-        {
-            foreach (var criterion in _criteria)
-            {
-                if (criterion.Operator == 0 && ReferenceEquals(criterion.Criteria2, Type.Missing))
-                {
-                    _range.AutoFilter(criterion.Field, criterion.Criteria1);
-                    continue;
-                }
-
-                _range.AutoFilter(
-                    criterion.Field,
-                    criterion.Criteria1,
-                    criterion.Operator,
-                    criterion.Criteria2,
-                    Type.Missing);
-            }
-        }
-    }
-
-    private sealed class FilterCriterion
-    {
-        public FilterCriterion(
-            int field,
-            object criteria1,
-            XlAutoFilterOperator autoFilterOperator,
-            object criteria2)
-        {
-            Field = field;
-            Criteria1 = criteria1;
-            Operator = autoFilterOperator;
-            Criteria2 = criteria2;
-        }
-
-        public int Field { get; }
-
-        public object Criteria1 { get; }
-
-        public XlAutoFilterOperator Operator { get; }
-
-        public object Criteria2 { get; }
+        public void Restore() => _autoFilter.ApplyFilter();
     }
 }

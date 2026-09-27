@@ -173,7 +173,7 @@ public static class DataOperationHost
             options.RowSizingMode,
             options.UseNativeExcelWrites,
             nativeSheetId);
-        using var filterScope = AutoFilterWriteScope.Suspend(sheet);
+        using var filterScope = AutoFilterWriteScope.Preserve(sheet);
         var queryStopwatch = Stopwatch.StartNew();
         try
         {

@@ -228,9 +228,26 @@ public static class SheetProjectionWriter
         var cols = projection.Values.GetLength(1);
         var target = CreateRange(worksheet, projection.StartRow, projection.StartColumn, rows, cols);
         LogFirstColumnIdentityStats(projection.Values);
+        var useRowScopedWrites = AutoFilterWriteScope.HasActiveFilters(worksheet);
+        if (useRowScopedWrites)
+        {
+            SessionFlowTrace.Log(
+                $"Excel write: active AutoFilter detected; using row-scoped values rows={rows} columns={cols}");
+        }
+
         if (useNativeExcelWrites)
         {
-            WriteNativeValues(worksheet, projection, rows, cols, nativeSheetId);
+            WriteNativeValues(
+                worksheet,
+                projection,
+                rows,
+                cols,
+                nativeSheetId,
+                useRowScopedWrites);
+        }
+        else if (useRowScopedWrites)
+        {
+            WriteComValuesByRow(worksheet, projection, rows, cols);
         }
         else
         {
@@ -245,7 +262,8 @@ public static class SheetProjectionWriter
         SheetProjection projection,
         int rowCount,
         int columnCount,
-        IntPtr? nativeSheetId)
+        IntPtr? nativeSheetId,
+        bool useRowScopedWrites)
     {
         var rowFirst = projection.StartRow - 1;
         var rowLast = rowFirst + rowCount - 1;
@@ -262,6 +280,43 @@ public static class SheetProjectionWriter
             $"Excel rejected the native worksheet write to {sheetName} " +
             $"at row {projection.StartRow}, column {projection.StartColumn}, " +
             $"size {rowCount}x{columnCount}.";
+        if (useRowScopedWrites)
+        {
+            for (var rowOffset = 0; rowOffset < rowCount; rowOffset++)
+            {
+                var rowValues = CopyRow(projection.Values, rowOffset, columnCount);
+                WriteNativeBlock(
+                    rowFirst + rowOffset,
+                    rowFirst + rowOffset,
+                    columnFirst,
+                    columnLast,
+                    nativeSheetId ?? CaptureNativeSheetId(worksheet),
+                    rowValues,
+                    failureMessage);
+            }
+
+            return;
+        }
+
+        WriteNativeBlock(
+            rowFirst,
+            rowLast,
+            columnFirst,
+            columnLast,
+            nativeSheetId ?? CaptureNativeSheetId(worksheet),
+            projection.Values,
+            failureMessage);
+    }
+
+    private static void WriteNativeBlock(
+        int rowFirst,
+        int rowLast,
+        int columnFirst,
+        int columnLast,
+        IntPtr sheetId,
+        object?[,] values,
+        string failureMessage)
+    {
         XlCall.XlReturn xlReturn;
         object result;
         try
@@ -271,12 +326,12 @@ public static class SheetProjectionWriter
                 rowLast,
                 columnFirst,
                 columnLast,
-                nativeSheetId ?? CaptureNativeSheetId(worksheet));
+                sheetId);
             xlReturn = XlCall.TryExcel(
                 XlCall.xlSet,
                 out result,
                 reference,
-                projection.Values);
+                values);
         }
         catch (Exception ex)
         {
@@ -289,6 +344,31 @@ public static class SheetProjectionWriter
                 $"{failureMessage} Excel C API result: {xlReturn}; " +
                 $"xlSet result: {result?.ToString() ?? "<null>"}.");
         }
+    }
+
+    private static void WriteComValuesByRow(
+        Worksheet worksheet,
+        SheetProjection projection,
+        int rowCount,
+        int columnCount)
+    {
+        for (var rowOffset = 0; rowOffset < rowCount; rowOffset++)
+        {
+            var row = projection.StartRow + rowOffset;
+            var target = CreateRange(worksheet, row, projection.StartColumn, 1, columnCount);
+            target.Value2 = CopyRow(projection.Values, rowOffset, columnCount);
+        }
+    }
+
+    private static object?[,] CopyRow(object?[,] values, int rowOffset, int columnCount)
+    {
+        var rowValues = new object?[1, columnCount];
+        for (var column = 0; column < columnCount; column++)
+        {
+            rowValues[0, column] = values[rowOffset, column];
+        }
+
+        return rowValues;
     }
 
     /// <summary>

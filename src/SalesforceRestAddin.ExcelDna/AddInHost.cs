@@ -413,7 +413,7 @@ public static class AddInHost
         var writesBulkProjection = operation == QueryRowsOperation
             || operation == RefreshTableDataOperation;
         using var filterScope = writesBulkProjection
-            ? AutoFilterWriteScope.Suspend(sheet)
+            ? AutoFilterWriteScope.Preserve(sheet)
             : null;
         try
         {
