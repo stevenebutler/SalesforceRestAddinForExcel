@@ -410,7 +410,9 @@ public static class AddInHost
         }
 
         DataOperationResult result;
-        using var filterScope = options.UseNativeExcelWrites
+        var writesBulkProjection = operation == QueryRowsOperation
+            || operation == RefreshTableDataOperation;
+        using var filterScope = writesBulkProjection
             ? AutoFilterWriteScope.Suspend(sheet)
             : null;
         try

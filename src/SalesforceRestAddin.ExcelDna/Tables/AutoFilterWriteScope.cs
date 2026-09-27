@@ -44,7 +44,7 @@ internal sealed class AutoFilterWriteScope : IDisposable
             state.Suspend();
         }
 
-        SessionFlowTrace.Log($"Native Excel write: suspended AutoFilters={states.Count}");
+        SessionFlowTrace.Log($"Excel bulk write: suspended AutoFilters={states.Count}");
         return new AutoFilterWriteScope(states);
     }
 
@@ -63,7 +63,7 @@ internal sealed class AutoFilterWriteScope : IDisposable
 
         if (_filters.Count > 0)
         {
-            SessionFlowTrace.Log($"Native Excel write: reapplied AutoFilters={_filters.Count}");
+            SessionFlowTrace.Log($"Excel bulk write: reapplied AutoFilters={_filters.Count}");
         }
     }
 

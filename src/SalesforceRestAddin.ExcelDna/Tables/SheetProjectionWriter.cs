@@ -227,6 +227,7 @@ public static class SheetProjectionWriter
         var rows = projection.Values.GetLength(0);
         var cols = projection.Values.GetLength(1);
         var target = CreateRange(worksheet, projection.StartRow, projection.StartColumn, rows, cols);
+        LogFirstColumnIdentityStats(projection.Values);
         if (useNativeExcelWrites)
         {
             WriteNativeValues(worksheet, projection, rows, cols, nativeSheetId);
@@ -256,7 +257,6 @@ public static class SheetProjectionWriter
             $"Native Excel write sheet={sheetName} " +
             $"rows={projection.StartRow}-{projection.StartRow + rowCount - 1} " +
             $"columns={projection.StartColumn}-{projection.StartColumn + columnCount - 1}");
-        LogFirstColumnIdentityStats(projection.Values);
 
         var failureMessage =
             $"Excel rejected the native worksheet write to {sheetName} " +
@@ -346,7 +346,7 @@ public static class SheetProjectionWriter
         }
 
         SessionFlowTrace.Log(
-            $"Native Excel write source firstColumnNonEmpty={nonEmpty} " +
+            $"Excel write source firstColumnNonEmpty={nonEmpty} " +
             $"firstColumnDistinct={distinct.Count}");
     }
 

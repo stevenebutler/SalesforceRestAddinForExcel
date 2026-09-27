@@ -173,10 +173,10 @@ Prefer recording errors in a Core result DTO; ExcelDna applies visuals in one pa
 | `ColumnSizingMode` | Fit columns to the first downloaded page (default), all downloaded data, or headers only |
 | `RowSizingMode` | Force standard-height single lines (default), fit rows per page, or leave rows unchanged |
 
-The native write path captures active worksheet/table AutoFilter criteria, exposes all
-filtered rows for the full streamed write, and reapplies the criteria once after the last
-page. This avoids mapping bulk arrays while worksheet rows are filtered and makes the
-filter reflect the newly written values.
+Bulk result writes capture active worksheet/table AutoFilter criteria, expose all filtered
+rows for the full streamed write, and reapply the criteria once after the last page. This
+applies to both COM and native writers, avoids mapping bulk arrays while worksheet rows are
+filtered, and makes the filter reflect the newly written values.
 
 ## Testability
 
