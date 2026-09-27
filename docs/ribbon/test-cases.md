@@ -234,7 +234,7 @@ Status column left blank for implementation tracking.
 | T-OPT-01 | FR-OPT-4 | Round-trip JSON store (existing `JsonConnectorOptionsStoreTests`) | Unit |
 | T-OPT-02 | FR-OPT-2 | Defaults match `ConnectorOptions` product defaults when store has no keys | Unit |
 | T-OPT-03 | design | `CompositeBatchSize` persisted and used by `RecordBatchSplitter` | Unit |
-| T-OPT-04 | FR-OPT-2/4 | Native Excel writes defaults off and round-trips through JSON | Unit |
+| T-OPT-04 | FR-OPT-4 | Native Excel writes default on; the temporary diagnostic override round-trips through JSON | Unit |
 | T-OPT-05 | FR-OPT-2 | Native bulk write preserves row alignment with adjacent/destination AutoFilters and Excel tables | Windows Excel smoke |
 
 ---

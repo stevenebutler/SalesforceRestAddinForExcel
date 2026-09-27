@@ -20,7 +20,7 @@ public sealed class JsonConnectorOptionsStoreTests
         await Assert.That(loaded.NoQueryLimit).IsFalse();
         await Assert.That(loaded.AutoAssignRule).IsFalse();
         await Assert.That(loaded.IncludeHiddenCells).IsFalse();
-        await Assert.That(loaded.UseNativeExcelWrites).IsFalse();
+        await Assert.That(loaded.UseNativeExcelWrites).IsTrue();
         await Assert.That(loaded.ColumnSizingMode).IsEqualTo(ColumnSizingMode.FirstDownloadedPage);
         await Assert.That(loaded.RowSizingMode).IsEqualTo(RowSizingMode.ForceSingleLine);
         await Assert.That(loaded.CompositeBatchSize).IsEqualTo(200);
@@ -36,7 +36,7 @@ public sealed class JsonConnectorOptionsStoreTests
 
         await Assert.That(loaded.AutoAssignRule).IsFalse();
         await Assert.That(loaded.IncludeHiddenCells).IsFalse();
-        await Assert.That(loaded.UseNativeExcelWrites).IsFalse();
+        await Assert.That(loaded.UseNativeExcelWrites).IsTrue();
         await Assert.That(loaded.ColumnSizingMode).IsEqualTo(ColumnSizingMode.FirstDownloadedPage);
         await Assert.That(loaded.RowSizingMode).IsEqualTo(RowSizingMode.ForceSingleLine);
 
@@ -65,6 +65,7 @@ public sealed class JsonConnectorOptionsStoreTests
         await Assert.That(loaded.NoQueryLimit).IsFalse();
         await Assert.That(loaded.AutoAssignRule).IsFalse();
         await Assert.That(loaded.IncludeHiddenCells).IsFalse();
+        await Assert.That(loaded.UseNativeExcelWrites).IsTrue();
         await Assert.That(loaded.ColumnSizingMode).IsEqualTo(ColumnSizingMode.FirstDownloadedPage);
         await Assert.That(loaded.RowSizingMode).IsEqualTo(RowSizingMode.ForceSingleLine);
 
@@ -191,6 +192,20 @@ public sealed class JsonConnectorOptionsStoreTests
     }
 
     [Test]
+    public async Task SaveAndLoad_PreservesNativeWriteDiagnosticOverride()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"forceconnector-options-{Guid.NewGuid():N}.json");
+        var store = new JsonConnectorOptionsStore(path);
+
+        store.Save(new ConnectorOptions { UseNativeExcelWrites = false });
+        var loaded = store.Load();
+
+        await Assert.That(loaded.UseNativeExcelWrites).IsFalse();
+
+        File.Delete(path);
+    }
+
+    [Test]
     public async Task Load_InvalidNativeExcelWrites_DefaultsOnlyThatSetting_And_LogsWarning()
     {
         var path = WriteTemp(
@@ -205,7 +220,7 @@ public sealed class JsonConnectorOptionsStoreTests
         var loaded = new JsonConnectorOptionsStore(path, warnings.Add).Load();
 
         await Assert.That(loaded.UseReference).IsTrue();
-        await Assert.That(loaded.UseNativeExcelWrites).IsFalse();
+        await Assert.That(loaded.UseNativeExcelWrites).IsTrue();
         await Assert.That(warnings.Count).IsEqualTo(1);
         await Assert.That(warnings[0]).Contains("useNativeExcelWrites");
 

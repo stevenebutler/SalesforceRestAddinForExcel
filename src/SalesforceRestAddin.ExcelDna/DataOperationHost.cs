@@ -69,8 +69,9 @@ public static class DataOperationHost
         var sheet = (ExcelWorksheet)excel.ActiveSheet;
         var options = LoadOptions();
         var nativeSheetId = options.UseNativeExcelWrites
-            ? SheetProjectionWriter.CaptureNativeSheetId(sheet)
+            ? SheetProjectionWriter.TryCaptureNativeSheetId(sheet)
             : (IntPtr?)null;
+        var useNativeExcelWrites = options.UseNativeExcelWrites && nativeSheetId.HasValue;
         AddInHost.EnsureLoggedInAndRefreshUi(services.Gate);
 
         var activeCell = (ExcelRange)excel.ActiveCell;
@@ -171,7 +172,7 @@ public static class DataOperationHost
         var pageWrites = new PagedQueryWriteState(
             options.ColumnSizingMode,
             options.RowSizingMode,
-            options.UseNativeExcelWrites,
+            useNativeExcelWrites,
             nativeSheetId);
         using var filterScope = AutoFilterWriteScope.Preserve(sheet);
         var queryStopwatch = Stopwatch.StartNew();
@@ -375,7 +376,7 @@ public static class DataOperationHost
                     result.Projection,
                     options.ColumnSizingMode,
                     options.RowSizingMode,
-                    options.UseNativeExcelWrites,
+                    options.UseNativeExcelWrites && nativeSheetId.HasValue,
                     nativeSheetId);
             }
 

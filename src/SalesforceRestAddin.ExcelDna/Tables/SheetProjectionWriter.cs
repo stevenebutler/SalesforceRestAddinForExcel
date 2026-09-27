@@ -400,6 +400,24 @@ public static class SheetProjectionWriter
             $"Excel C API result: {xlReturn}; result type: {result?.GetType().FullName ?? "<null>"}.");
     }
 
+    /// <summary>
+    /// Prepares the native write path before worksheet mutation. Unsupported Excel
+    /// contexts fall back to COM for the complete operation.
+    /// </summary>
+    internal static IntPtr? TryCaptureNativeSheetId(Worksheet worksheet)
+    {
+        try
+        {
+            return CaptureNativeSheetId(worksheet);
+        }
+        catch (Exception ex)
+        {
+            SessionFlowTrace.Log(
+                $"Native Excel writes unavailable; falling back to COM. {ex.Message}");
+            return null;
+        }
+    }
+
     private static string GetQualifiedSheetName(Worksheet worksheet)
     {
         var workbook = (Workbook)worksheet.Parent;

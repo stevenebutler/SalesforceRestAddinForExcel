@@ -338,8 +338,10 @@ public static class AddInHost
 
         var sheet = (Worksheet)excel.ActiveSheet;
         var options = LoadOptions();
-        var nativeSheetId = options.UseNativeExcelWrites
-            ? SheetProjectionWriter.CaptureNativeSheetId(sheet)
+        var writesBulkProjection = operation == QueryRowsOperation
+            || operation == RefreshTableDataOperation;
+        var nativeSheetId = options.UseNativeExcelWrites && writesBulkProjection
+            ? SheetProjectionWriter.TryCaptureNativeSheetId(sheet)
             : (IntPtr?)null;
         EnsureLoggedInAndRefreshUi(Services.Gate);
         ForceTableSnapshot snapshot;
@@ -410,8 +412,6 @@ public static class AddInHost
         }
 
         DataOperationResult result;
-        var writesBulkProjection = operation == QueryRowsOperation
-            || operation == RefreshTableDataOperation;
         using var filterScope = writesBulkProjection
             ? AutoFilterWriteScope.Preserve(sheet)
             : null;

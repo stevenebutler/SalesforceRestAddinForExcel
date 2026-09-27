@@ -12,7 +12,7 @@ public sealed class OptionsWindow : Window
     private readonly CheckBox _noQueryLimit;
     private readonly CheckBox _autoAssignRule;
     private readonly CheckBox _includeHiddenCells;
-    private readonly CheckBox _useNativeExcelWrites;
+    private readonly bool _useNativeExcelWrites;
     private readonly RadioButton _fitColumnsToAllData;
     private readonly RadioButton _fitColumnsToFirstPage;
     private readonly RadioButton _fitColumnsToHeadersOnly;
@@ -59,10 +59,10 @@ public sealed class OptionsWindow : Window
             "Include Hidden Columns/Rows",
             current.IncludeHiddenCells,
             "Includes manually hidden or filtered-out rows and hidden columns in Update Selected Cells. When off, the add-in skips them.");
-        _useNativeExcelWrites = MakeCheck(
-            "Use native Excel writes (experimental)",
-            current.UseNativeExcelWrites,
-            "Uses Excel's native API for bulk worksheet writes during queries and refreshes.");
+        // Native writes are the product default and no longer a user-facing choice.
+        // Preserve the persisted value so the temporary diagnostic override survives
+        // unrelated edits in this dialog.
+        _useNativeExcelWrites = current.UseNativeExcelWrites;
         _fitColumnsToFirstPage = MakeRadio(
             "Fit columns to first downloaded page",
             "columnSizing",
@@ -92,7 +92,6 @@ public sealed class OptionsWindow : Window
         root.Children.Add(_noQueryLimit);
         root.Children.Add(_autoAssignRule);
         root.Children.Add(_includeHiddenCells);
-        root.Children.Add(_useNativeExcelWrites);
         root.Children.Add(MakeSizingGroup(
             "Column sizing",
             _fitColumnsToFirstPage,
@@ -161,7 +160,7 @@ public sealed class OptionsWindow : Window
             NoQueryLimit = _noQueryLimit.IsChecked == true,
             AutoAssignRule = _autoAssignRule.IsChecked == true,
             IncludeHiddenCells = _includeHiddenCells.IsChecked == true,
-            UseNativeExcelWrites = _useNativeExcelWrites.IsChecked == true,
+            UseNativeExcelWrites = _useNativeExcelWrites,
             ColumnSizingMode = _fitColumnsToFirstPage.IsChecked == true
                 ? ColumnSizingMode.FirstDownloadedPage
                 : _fitColumnsToHeadersOnly.IsChecked == true

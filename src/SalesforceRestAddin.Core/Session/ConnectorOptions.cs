@@ -39,9 +39,9 @@ public sealed class ConnectorOptions
 
     /// <summary>
     /// Use Excel-DNA's native Excel C API for bulk worksheet value writes.
-    /// Default false while the path is validated against filtered worksheets.
+    /// Default true. The persisted setting remains as a temporary diagnostic override.
     /// </summary>
-    public bool UseNativeExcelWrites { get; init; }
+    public bool UseNativeExcelWrites { get; init; } = true;
 
     /// <summary>Controls column-width sizing after Salesforce data writes.</summary>
     public ColumnSizingMode ColumnSizingMode { get; init; } = ColumnSizingMode.FirstDownloadedPage;

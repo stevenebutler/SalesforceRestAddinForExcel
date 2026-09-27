@@ -24,7 +24,7 @@ Prefer bulk range I/O. Do **not** read or write worksheet data cell-by-cell in h
 ### Write path
 
 1. Build `object[,]` (or column-scoped arrays) in memory from Salesforce responses.
-2. Assign each contiguous rectangle in one operation via `SheetProjectionWriter`: `Range.Value2` by default, or native `ExcelReference.SetValue` (`xlSet`) when the experimental option is enabled. Do not write per row or per cell.
+2. Assign each contiguous rectangle in one operation via `SheetProjectionWriter`: native `ExcelReference.SetValue` (`xlSet`) by default, with `Range.Value2` as the compatibility fallback. Do not write per row or per cell except for the filtered-sheet preservation path described below.
 3. Apply **number formats** at **column** or **range** scope before or after the bulk value assign.
 4. After write, apply the selected sizing policies: columns fit all pages, the first page, or headers only; rows fit and cap at **3×** `StandardHeight`, force standard-height single lines, or remain unchanged. Keep range-level operations bulk; the capped-row path is the only O(rows) exception.
 5. Do not set comments, interior color, or validation **per cell** in the hot path. Batch error annotation where possible (see Error feedback).
@@ -169,7 +169,7 @@ Prefer recording errors in a Core result DTO; ExcelDna applies visuals in one pa
 | `NoQueryLimit` | Skip maxRows/maxCols checks |
 | `AutoAssignRule` | When false, suppress auto-assignment header |
 | `IncludeHiddenCells` | When false (default), update omits hidden rows/columns; when true, include them |
-| `UseNativeExcelWrites` | When true, bulk value arrays use Excel-DNA `ExcelReference.SetValue` (`xlSet`); default false while filtered-sheet behavior is validated |
+| `UseNativeExcelWrites` | Temporary JSON diagnostic override. Native `xlSet` writes default on; `false` selects COM. Failure to capture the native sheet id before mutation automatically falls back to COM. |
 | `ColumnSizingMode` | Fit columns to the first downloaded page (default), all downloaded data, or headers only |
 | `RowSizingMode` | Force standard-height single lines (default), fit rows per page, or leave rows unchanged |
 
