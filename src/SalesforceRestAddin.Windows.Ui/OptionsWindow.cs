@@ -39,14 +39,30 @@ public sealed class OptionsWindow : Window
 
         var root = new StackPanel { Margin = new Thickness(16) };
         _useReference = current.UseReference;
-        _noWarning = MakeCheck("Do not warn before insert or update operations.", current.NoWarning);
-        _noConfirmQueryDownload = MakeCheck("Do not confirm Query Table downloads.", current.NoConfirmQueryDownload);
-        _noQueryLimit = MakeCheck("No Query Limit", current.NoQueryLimit);
-        _autoAssignRule = MakeCheck("Enable Auto Assign Rule", current.AutoAssignRule);
-        _includeHiddenCells = MakeCheck("Include Hidden Columns/Rows", current.IncludeHiddenCells);
+        _noWarning = MakeCheck(
+            "Do not warn before insert or update operations.",
+            current.NoWarning,
+            "Skips confirmation prompts before inserts and before updates that include hidden cells. The operation starts immediately.");
+        _noConfirmQueryDownload = MakeCheck(
+            "Do not confirm Query Table downloads.",
+            current.NoConfirmQueryDownload,
+            "Normally, Query Table Data counts matching records and asks before downloading. Enable this to download immediately.");
+        _noQueryLimit = MakeCheck(
+            "No Query Limit",
+            current.NoQueryLimit,
+            "Removes the connector's safety limits of 3,500 rows and 20 columns for query, update, and delete operations. Salesforce limits still apply.");
+        _autoAssignRule = MakeCheck(
+            "Enable Auto Assign Rule",
+            current.AutoAssignRule,
+            "Allows active Salesforce assignment rules to run during inserts and updates, which can change record ownership (typically for Leads and Cases). When off, the add-in suppresses those rules.");
+        _includeHiddenCells = MakeCheck(
+            "Include Hidden Columns/Rows",
+            current.IncludeHiddenCells,
+            "Includes manually hidden or filtered-out rows and hidden columns in Update Selected Cells. When off, the add-in skips them.");
         _useNativeExcelWrites = MakeCheck(
             "Use native Excel writes (experimental)",
-            current.UseNativeExcelWrites);
+            current.UseNativeExcelWrites,
+            "Uses Excel's native API for bulk worksheet writes during queries and refreshes.");
         _fitColumnsToFirstPage = MakeRadio(
             "Fit columns to first downloaded page",
             "columnSizing",
@@ -88,8 +104,19 @@ public sealed class OptionsWindow : Window
             _fitRowsEachPage,
             _doNotFitRows));
 
-        root.Children.Add(new TextBlock { Text = "Composite batch size", Margin = new Thickness(0, 12, 0, 4) });
-        _batchSize = new TextBox { Text = current.CompositeBatchSize.ToString() };
+        const string batchSizeToolTip =
+            "Maximum number of records sent in each Salesforce composite request for create, update, delete, and retrieve operations. The default and Salesforce maximum is 200.";
+        root.Children.Add(new TextBlock
+        {
+            Text = "Composite batch size",
+            Margin = new Thickness(0, 12, 0, 4),
+            ToolTip = batchSizeToolTip,
+        });
+        _batchSize = new TextBox
+        {
+            Text = current.CompositeBatchSize.ToString(),
+            ToolTip = batchSizeToolTip,
+        };
         root.Children.Add(_batchSize);
 
         var clearCache = new Button
@@ -182,7 +209,7 @@ public sealed class OptionsWindow : Window
             MessageBoxImage.Information);
     }
 
-    private static CheckBox MakeCheck(string label, bool value) =>
+    private static CheckBox MakeCheck(string label, bool value, string toolTip) =>
         new()
         {
             Content = new TextBlock
@@ -193,6 +220,7 @@ public sealed class OptionsWindow : Window
             },
             IsChecked = value,
             Margin = new Thickness(0, 0, 0, 8),
+            ToolTip = toolTip,
         };
 
     private static RadioButton MakeRadio(string label, string groupName, bool value) =>

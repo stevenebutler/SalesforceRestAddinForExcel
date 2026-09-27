@@ -38,6 +38,10 @@ Map to [`ConnectorOptions`](../../src/SalesforceRestAddin.Core/Session/Connector
 | Column sizing | `ColumnSizingMode` | First downloaded page | Fit columns to the first downloaded page, all downloaded data, or headers only |
 | Row sizing | `RowSizingMode` | Force to single line | Force a single line, fit rows as each page downloads, or leave rows unchanged |
 
+Every non-sizing control provides a concise tooltip explaining its practical effect. This includes
+the confirmation, query-limit, assignment-rule, hidden-cell, native-write, and composite-batch-size
+options; the self-explanatory column and row sizing choices do not have tooltips.
+
 ### FR-OPT-3 Settings (dropped)
 
 | Topic | Status |
